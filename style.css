@@ -348,6 +348,9 @@ section {
 .product-price {
   margin-bottom: 15px;
 }
+
+/* --- PRODUCT SOLD COUNT --- */
+
 .new-price {
   font-weight: 700;
   font-size: 1.3rem;
@@ -691,4 +694,52 @@ section {
     width: 50%; /* 2 slides trên màn hình lớn */
     padding: 30px 15px; /* Thêm khoảng cách giữa các card */
   }
+}
+.product-sold-count {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.product-sold-count .fa-fire {
+  color: var(--accent-color);
+}
+.products-section .tabs .tab-link {
+  border: 1px solid transparent; /* Viền trong suốt */
+  background-color: #f0f0f0;
+  font-weight: 500;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Hiệu ứng khi di chuột vào nút (chưa được chọn) */
+.products-section .tabs .tab-link:not(.active):hover {
+  transform: scale(1.05); /* Phóng to nhẹ */
+  background-color: #e5e5e5;
+}
+
+/* Nút đang được chọn (active) */
+.products-section .tabs .tab-link.active {
+  /* Nền Gradient theo màu thương hiệu */
+  background: linear-gradient(45deg, var(--accent-color), #ff8c00);
+  color: var(--secondary-color);
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(255, 69, 0, 0.3); /* Bóng đổ màu cam mờ */
+  transform: scale(1.05); /* Phóng to nhẹ */
+}
+.product-image {
+  background: #ffffff; /* Đảm bảo nền luôn trắng sạch */
+  padding: 20px; /* Tạo khoảng đệm 20px xung quanh ảnh */
+}
+
+/* Thẻ img bên trong */
+.product-image img {
+  width: 100%;
+  height: 100%; /* Cần thêm height 100% để hoạt động tốt với padding */
+  aspect-ratio: 1 / 1;
+  /* Đây là thay đổi quan trọng nhất */
+  object-fit: contain; /* Co dãn ảnh để nằm trọn vẹn bên trong khung */
 }

@@ -71,61 +71,140 @@ document.addEventListener("DOMContentLoaded", function () {
   revealElements.forEach((elem) => observer.observe(elem));
 
   // --- PRODUCT FILTERING & LOAD MORE LOGIC ---
+  // --- PRODUCT FILTERING & DYNAMIC LOADING LOGIC ---
+  const sheetURL =
+    "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIA-8yO4hU4V5zBRYvv28TRJNW6pEWRd1WAkXCb2nzM4b5JPEHlqISvvDix6mfRzm4GrcApaXeZjpn/pub?gid=0&single=true&output=csv"; // <--- PASTE THE GOOGLE SHEET CSV URL HERE
+
+  const productGrid = document.querySelector(".product-grid");
   const tabLinks = document.querySelectorAll(".tab-link");
-  const productCards = document.querySelectorAll(".product-card");
   const loadMoreBtn = document.getElementById("load-more-btn");
-  const itemsPerLoad = 8;
+
+  let allProducts = []; // Mảng để lưu tất cả sản phẩm
   let currentFilter = "all";
+  let itemsShown = 0;
+  const itemsPerLoad = 8;
 
+  // Hàm chính: Tải và xử lý dữ liệu từ Google Sheet
+  async function fetchProducts() {
+    if (!productGrid) return; // Dừng lại nếu không tìm thấy product-grid
+
+    try {
+      const response = await fetch(sheetURL);
+      if (!response.ok) {
+        throw new Error("Network response was not ok");
+      }
+      const csvText = await response.text();
+
+      // Chuyển đổi CSV thành mảng các đối tượng sản phẩm
+      const lines = csvText.trim().split("\n");
+      const headers = lines[0].trim().split(",");
+      allProducts = lines
+        .slice(1)
+        .map((line) => {
+          const values = line.trim().split(",");
+          let product = {};
+          headers.forEach((header, index) => {
+            product[header.trim()] = values[index] ? values[index].trim() : "";
+          });
+          return product;
+        })
+        .filter((p) => p.id); // Lọc ra những dòng có id để tránh dòng trống
+
+      filterAndShowProducts();
+    } catch (error) {
+      console.error("Lỗi khi tải sản phẩm:", error);
+      productGrid.innerHTML =
+        '<p style="text-align: center;">Không thể tải danh sách sản phẩm. Vui lòng kiểm tra lại đường link Google Sheets.</p>';
+    }
+  }
+
+  // Hàm hiển thị sản phẩm ra HTML
+  function displayProducts(productsToDisplay) {
+    productGrid.innerHTML = ""; // Xóa sản phẩm cũ
+    productsToDisplay.forEach((product) => {
+      const productCard = document.createElement("div");
+      productCard.className = "product-card show";
+      productCard.setAttribute("data-category", product.category);
+
+      const formatPrice = (price) => {
+        if (!price || isNaN(price)) return "";
+        return new Intl.NumberFormat("vi-VN", {
+          style: "currency",
+          currency: "VND",
+        }).format(price);
+      };
+
+      let soldCountHTML = "";
+      if (product.sold_count && Number(product.sold_count) > 0) {
+        soldCountHTML = `
+                    <div class="product-sold-count">
+                        <i class="fa-solid fa-fire"></i>
+                        <span>Đã bán ${product.sold_count}</span>
+                    </div>
+                `;
+      }
+
+      const oldPriceHTML = product.price_old
+        ? `<span class="old-price">${formatPrice(product.price_old)}</span>`
+        : "";
+      const tagHTML = product.tag
+        ? `<span class="product-tag">${product.tag}</span>`
+        : "";
+
+      productCard.innerHTML = `
+                <div class="product-image">
+                    <img src="${product.image_url}" alt="${product.name}" />
+                    ${tagHTML}
+                </div>
+                <div class="product-info">
+                    <h3>${product.name}</h3>
+                    <div class="product-rating">
+                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-alt"></i>
+                    </div>
+                    ${soldCountHTML}
+                    <div class="product-price">
+                        <span class="new-price">${formatPrice(
+                          product.price_new
+                        )}</span>
+                        ${oldPriceHTML}
+                    </div>
+                    <a href="https://zalo.me/0981936021" class="buy-button">Mua Ngay Qua Zalo</a>
+                </div>
+            `;
+      productGrid.appendChild(productCard);
+    });
+  }
+
+  // Hàm lọc và reset hiển thị
   function filterAndShowProducts() {
-    let visibleItems = 0;
-    productCards.forEach((card) => {
-      const category = card.getAttribute("data-category");
-      const matchesFilter =
-        currentFilter === "all" || category === currentFilter;
-      card.style.display = "none";
-      card.classList.remove("show");
-      if (matchesFilter) {
-        if (visibleItems < itemsPerLoad) {
-          card.style.display = "block";
-          card.classList.add("show");
-          visibleItems++;
-        }
-      }
-    });
-    updateLoadMoreButton();
+    const filteredProducts = allProducts.filter(
+      (p) => currentFilter === "all" || p.category === currentFilter
+    );
+    itemsShown = itemsPerLoad;
+    displayProducts(filteredProducts.slice(0, itemsShown));
+    updateLoadMoreButton(filteredProducts);
   }
 
+  // Hàm tải thêm sản phẩm
   function loadMoreProducts() {
-    let newlyShownItems = 0;
-    productCards.forEach((card) => {
-      const category = card.getAttribute("data-category");
-      const matchesFilter =
-        currentFilter === "all" || category === currentFilter;
-      if (card.style.display === "none" && matchesFilter) {
-        if (newlyShownItems < itemsPerLoad) {
-          card.style.display = "block";
-          card.classList.add("show");
-          newlyShownItems++;
-        }
-      }
-    });
-    updateLoadMoreButton();
+    const filteredProducts = allProducts.filter(
+      (p) => currentFilter === "all" || p.category === currentFilter
+    );
+    itemsShown += itemsPerLoad;
+    displayProducts(filteredProducts.slice(0, itemsShown));
+    updateLoadMoreButton(filteredProducts);
   }
 
-  function updateLoadMoreButton() {
-    let hiddenCount = 0;
-    productCards.forEach((card) => {
-      const category = card.getAttribute("data-category");
-      const matchesFilter =
-        currentFilter === "all" || category === currentFilter;
-      if (matchesFilter && card.style.display === "none") {
-        hiddenCount++;
-      }
-    });
-    loadMoreBtn.style.display = hiddenCount > 0 ? "block" : "none";
+  // Hàm cập nhật nút "Xem thêm"
+  function updateLoadMoreButton(filteredProducts) {
+    if (itemsShown >= filteredProducts.length) {
+      loadMoreBtn.style.display = "none";
+    } else {
+      loadMoreBtn.style.display = "block";
+    }
   }
 
+  // Gắn sự kiện cho các tab filter
   tabLinks.forEach((tab) => {
     tab.addEventListener("click", () => {
       tabLinks.forEach((link) => link.classList.remove("active"));
@@ -135,8 +214,71 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 
-  loadMoreBtn.addEventListener("click", loadMoreProducts);
-  filterAndShowProducts();
+  // Gắn sự kiện cho nút "Xem thêm"
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener("click", loadMoreProducts);
+  }
+
+  // Bắt đầu chạy
+  fetchProducts();
+
+  // --- TESTIMONIALS SLIDER LOGIC (Giữ nguyên) ---
+  // ... (Toàn bộ code của slider giữ nguyên như file cũ của bạn) ...
+  const sliderContainer = document.querySelector(".testimonial-slider");
+  if (sliderContainer) {
+    const track = sliderContainer.querySelector(".testimonial-track");
+    const slides = Array.from(track.children);
+    const nextButton = document.querySelector(".next-btn");
+    const prevButton = document.querySelector(".prev-btn");
+    const dotsNav = document.querySelector(".slider-dots");
+    let slidesPerPage;
+    let currentIndex = 0;
+    let slideCount;
+
+    const setupSlider = () => {
+      slidesPerPage = window.innerWidth >= 768 ? 2 : 1;
+      slideCount = Math.ceil(slides.length / slidesPerPage);
+      currentIndex = 0;
+      updateSliderUI();
+      createDots();
+    };
+
+    const createDots = () => {
+      dotsNav.innerHTML = "";
+      for (let i = 0; i < slideCount; i++) {
+        const dot = document.createElement("button");
+        dot.classList.add("dot");
+        if (i === currentIndex) dot.classList.add("active");
+        dotsNav.appendChild(dot);
+        dot.addEventListener("click", () => {
+          currentIndex = i;
+          updateSliderUI();
+        });
+      }
+    };
+
+    const updateSliderUI = () => {
+      const amountToMove = currentIndex * sliderContainer.clientWidth;
+      track.style.transform = `translateX(-${amountToMove}px)`;
+      const dots = Array.from(dotsNav.children);
+      dots.forEach((dot, index) => {
+        dot.classList.toggle("active", index === currentIndex);
+      });
+    };
+
+    nextButton.addEventListener("click", () => {
+      currentIndex = (currentIndex + 1) % slideCount;
+      updateSliderUI();
+    });
+
+    prevButton.addEventListener("click", () => {
+      currentIndex = (currentIndex - 1 + slideCount) % slideCount;
+      updateSliderUI();
+    });
+
+    setupSlider();
+    window.addEventListener("resize", setupSlider);
+  }
 });
 
 // --- TESTIMONIALS SLIDER LOGIC (REFACTORED FOR RESPONSIVENESS) ---
