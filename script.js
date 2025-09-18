@@ -17,6 +17,8 @@ document.addEventListener("DOMContentLoaded", function () {
   mobileNavToggle.addEventListener("click", function () {
     navWrapper.classList.toggle("is-open");
     this.classList.toggle("is-open");
+    // REVISED: Add class to body to prevent scrolling
+    document.body.classList.toggle("nav-open");
   });
 
   // Đóng menu khi nhấp vào một link
@@ -24,6 +26,8 @@ document.addEventListener("DOMContentLoaded", function () {
     link.addEventListener("click", () => {
       navWrapper.classList.remove("is-open");
       mobileNavToggle.classList.remove("is-open");
+      // REVISED: Remove class from body to re-enable scrolling
+      document.body.classList.remove("nav-open");
     });
   });
 
@@ -70,7 +74,6 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   revealElements.forEach((elem) => observer.observe(elem));
 
-  // --- PRODUCT FILTERING & LOAD MORE LOGIC ---
   // --- PRODUCT FILTERING & DYNAMIC LOADING LOGIC ---
   const sheetURL =
     "https://docs.google.com/spreadsheets/d/e/2PACX-1vSIA-8yO4hU4V5zBRYvv28TRJNW6pEWRd1WAkXCb2nzM4b5JPEHlqISvvDix6mfRzm4GrcApaXeZjpn/pub?gid=0&single=true&output=csv"; // <--- PASTE THE GOOGLE SHEET CSV URL HERE
@@ -222,8 +225,7 @@ document.addEventListener("DOMContentLoaded", function () {
   // Bắt đầu chạy
   fetchProducts();
 
-  // --- TESTIMONIALS SLIDER LOGIC (Giữ nguyên) ---
-  // ... (Toàn bộ code của slider giữ nguyên như file cũ của bạn) ...
+  // --- TESTIMONIALS SLIDER LOGIC ---
   const sliderContainer = document.querySelector(".testimonial-slider");
   if (sliderContainer) {
     const track = sliderContainer.querySelector(".testimonial-track");
@@ -238,7 +240,8 @@ document.addEventListener("DOMContentLoaded", function () {
     const setupSlider = () => {
       slidesPerPage = window.innerWidth >= 768 ? 2 : 1;
       slideCount = Math.ceil(slides.length / slidesPerPage);
-      currentIndex = 0;
+      // Reset currentIndex to avoid errors on resize
+      currentIndex = currentIndex >= slideCount ? slideCount - 1 : currentIndex;
       updateSliderUI();
       createDots();
     };
@@ -281,59 +284,4 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-// --- TESTIMONIALS SLIDER LOGIC (REFACTORED FOR RESPONSIVENESS) ---
-const sliderContainer = document.querySelector(".testimonial-slider");
-if (sliderContainer) {
-  const track = sliderContainer.querySelector(".testimonial-track");
-  const slides = Array.from(track.children);
-  const nextButton = document.querySelector(".next-btn");
-  const prevButton = document.querySelector(".prev-btn");
-  const dotsNav = document.querySelector(".slider-dots");
-  let slidesPerPage;
-  let currentIndex = 0;
-  let slideCount;
-
-  const setupSlider = () => {
-    slidesPerPage = window.innerWidth >= 768 ? 2 : 1;
-    slideCount = Math.ceil(slides.length / slidesPerPage);
-    currentIndex = 0;
-    updateSliderUI();
-    createDots();
-  };
-
-  const createDots = () => {
-    dotsNav.innerHTML = "";
-    for (let i = 0; i < slideCount; i++) {
-      const dot = document.createElement("button");
-      dot.classList.add("dot");
-      if (i === currentIndex) dot.classList.add("active");
-      dotsNav.appendChild(dot);
-      dot.addEventListener("click", () => {
-        currentIndex = i;
-        updateSliderUI();
-      });
-    }
-  };
-
-  const updateSliderUI = () => {
-    const amountToMove = currentIndex * sliderContainer.clientWidth;
-    track.style.transform = `translateX(-${amountToMove}px)`;
-    const dots = Array.from(dotsNav.children);
-    dots.forEach((dot, index) => {
-      dot.classList.toggle("active", index === currentIndex);
-    });
-  };
-
-  nextButton.addEventListener("click", () => {
-    currentIndex = (currentIndex + 1) % slideCount;
-    updateSliderUI();
-  });
-
-  prevButton.addEventListener("click", () => {
-    currentIndex = (currentIndex - 1 + slideCount) % slideCount;
-    updateSliderUI();
-  });
-
-  setupSlider();
-  window.addEventListener("resize", setupSlider);
-}
+// FIXED: Removed the duplicated slider logic that was here.

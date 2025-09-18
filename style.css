@@ -1,4 +1,4 @@
-/* --- GLOBAL STYLES & VARIABLES --- */
+/* --- GLOBAL STyles & VARIABLES --- */
 :root {
   --primary-color: #111111;
   --secondary-color: #ffffff;
@@ -27,6 +27,11 @@ body {
   background-color: var(--secondary-color);
   -webkit-font-smoothing: antialiased; /* Làm mịn font trên Safari/Chrome */
   -moz-osx-font-smoothing: grayscale; /* Làm mịn font trên Firefox */
+  overflow-x: hidden;
+}
+
+body.nav-open {
+  /* This class is still useful if you want to add an overlay later */
 }
 
 .container {
@@ -43,7 +48,6 @@ h4 {
   line-height: 1.2;
 }
 
-/* Tối ưu hóa font-size tự động co dãn */
 h1 {
   font-size: clamp(2.5rem, 6vw, 3.5rem);
   font-weight: 900;
@@ -63,7 +67,7 @@ a {
 }
 section {
   padding: clamp(60px, 8vw, 80px) 0;
-  overflow-x: hidden; /* Ngăn scroll ngang do animation */
+  overflow-x: hidden;
 }
 
 /* --- HIỆU ỨNG CUỘN TRANG --- */
@@ -91,7 +95,7 @@ section {
 }
 .header.scrolled {
   background-color: rgba(255, 255, 255, 0.9);
-  -webkit-backdrop-filter: blur(10px); /* Tương thích Safari */
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.08);
   border-bottom: 1px solid var(--border-color);
@@ -110,7 +114,7 @@ section {
   background: linear-gradient(45deg, var(--accent-color), #ff8c00, #ff4500);
   -webkit-background-clip: text;
   background-clip: text;
-  color: transparent; /* Sửa lại để tương thích tốt hơn */
+  color: transparent;
   -webkit-text-fill-color: transparent;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
@@ -170,7 +174,8 @@ section {
   border: none;
   cursor: pointer;
   z-index: 1001;
-  padding: 10px; /* Tăng vùng có thể click */
+  padding: 10px;
+  position: relative;
 }
 
 .hamburger {
@@ -266,20 +271,26 @@ section {
 .tab-link {
   padding: 10px 25px;
   font-size: 1rem;
-  font-weight: 700;
-  background: var(--light-gray-color);
+  border: 1px solid transparent;
+  background-color: #f0f0f0;
+  font-weight: 500;
   color: var(--text-color);
-  border: none;
   border-radius: 50px;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.3s ease-in-out;
 }
-.tab-link.active,
-.tab-link:hover {
-  background: var(--primary-color);
+
+.tab-link:not(.active):hover {
+  transform: scale(1.05);
+  background-color: #e5e5e5;
+}
+
+.tab-link.active {
+  background: linear-gradient(45deg, var(--accent-color), #ff8c00);
   color: var(--secondary-color);
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  font-weight: 700;
+  box-shadow: 0 6px 20px rgba(255, 69, 0, 0.3);
+  transform: scale(1.05);
 }
 
 .product-grid {
@@ -295,7 +306,7 @@ section {
   text-align: center;
   background: var(--secondary-color);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-  display: none; /* JS sẽ xử lý việc hiển thị */
+  display: none;
 }
 .product-card.show {
   display: block;
@@ -306,12 +317,14 @@ section {
 }
 .product-image {
   position: relative;
-  background: #f1f1f1;
+  background: #ffffff;
+  padding: 20px;
 }
 .product-image img {
   width: 100%;
-  aspect-ratio: 1 / 1; /* Đảm bảo ảnh luôn vuông */
-  object-fit: cover;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
   display: block;
   transition: transform 0.5s ease;
 }
@@ -338,18 +351,31 @@ section {
 .product-card h3 {
   margin: 0 0 10px;
   font-size: 1.1rem;
-  height: 44px; /* 2 dòng text */
+  height: 44px;
   overflow: hidden;
 }
 .product-rating {
   color: #f39c12;
   margin-bottom: 10px;
 }
+
+.product-sold-count {
+  font-size: 0.9rem;
+  color: #555;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+.product-sold-count .fa-fire {
+  color: var(--accent-color);
+}
+
 .product-price {
   margin-bottom: 15px;
 }
-
-/* --- PRODUCT SOLD COUNT --- */
 
 .new-price {
   font-weight: 700;
@@ -408,8 +434,8 @@ section {
   transition: transform 0.5s ease-in-out;
 }
 .testimonial-card {
-  flex-shrink: 0; /* Quan trọng để không bị co lại */
-  width: 100%; /* Chiếm 100% trên mobile */
+  flex-shrink: 0;
+  width: 100%;
   background: var(--secondary-color);
   padding: 30px;
   border-radius: 15px;
@@ -441,7 +467,6 @@ section {
   position: relative;
 }
 
-/* Loại bỏ pseudo-elements để tránh lỗi layout */
 .testimonial-card p::before,
 .testimonial-card p::after {
   content: none;
@@ -618,38 +643,61 @@ section {
 
 /* Điện thoại & Tablet đứng (dưới 768px) */
 @media (max-width: 767px) {
+  /* Cho header làm gốc định vị cho menu */
+  .header.scrolled {
+    position: sticky;
+  }
+
   .mobile-nav-toggle {
     display: block;
   }
 
+  /* === NEW: MENU XỔ XUỐNG ĐƠN GIẢN === */
   .nav-wrapper {
-    position: fixed;
-    top: 0;
-    right: -100%;
-    width: 70%;
-    max-width: 300px;
-    height: 100vh;
+    position: absolute;
+    top: 100%; /* Nằm ngay dưới header */
+    left: 0;
+    width: 100%;
     background-color: white;
-    box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 10px 15px -5px rgba(0, 0, 0, 0.1);
+
+    /* Giao diện bên trong */
     flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    gap: 40px;
-    transition: right 0.5s cubic-bezier(0.77, 0, 0.175, 1);
+    align-items: center; /* Căn giữa các mục */
+    gap: 0; /* Xóa bỏ gap cũ */
+    padding: 10px 0;
+
+    /* Hiệu ứng xổ xuống */
+    max-height: 0;
+    overflow: hidden;
+    visibility: hidden;
+    transition: max-height 0.4s ease-out, visibility 0.4s ease,
+      padding 0.4s ease;
   }
 
   .nav-wrapper.is-open {
-    right: 0;
+    max-height: 500px; /* Chiều cao tối đa khi mở */
+    visibility: visible;
   }
 
   .main-nav ul {
     flex-direction: column;
     text-align: center;
-    gap: 20px;
+    gap: 0;
+    width: 100%;
   }
+
   .main-nav a {
-    font-size: 1.2rem;
+    display: block; /* Cho link chiếm toàn bộ chiều rộng */
+    padding: 15px; /* Tăng vùng nhấn */
+    font-size: 1.1rem; /* Cỡ chữ vừa phải */
+    border-radius: 0; /* Bỏ bo tròn */
   }
+
+  .hotline {
+    margin-top: 10px;
+  }
+  /* === END NEW === */
 
   .mobile-nav-toggle.is-open .hamburger {
     background-color: transparent;
@@ -662,18 +710,14 @@ section {
   }
 
   .hero {
-    background-attachment: scroll; /* Tắt hiệu ứng parallax trên mobile để tiết kiệm pin */
-  }
-
-  .testimonial-slider-wrapper {
-    padding: 0 15px; /* Thêm padding để nút không bị dính sát lề */
+    background-attachment: scroll;
   }
 
   .prev-btn {
-    left: -10px;
+    left: 10px;
   }
   .next-btn {
-    right: -10px;
+    right: 10px;
   }
 }
 
@@ -684,62 +728,14 @@ section {
     gap: 20px;
   }
   .product-grid {
-    grid-template-columns: 1fr; /* 1 sản phẩm 1 hàng */
+    grid-template-columns: 1fr;
   }
 }
 
 /* Cải thiện cho Desktop với slider testimonials */
 @media (min-width: 768px) {
   .testimonial-card {
-    width: 50%; /* 2 slides trên màn hình lớn */
-    padding: 30px 15px; /* Thêm khoảng cách giữa các card */
+    width: calc(50% - 20px);
+    margin: 0 10px;
   }
-}
-.product-sold-count {
-  font-size: 0.9rem;
-  color: #555;
-  margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-}
-
-.product-sold-count .fa-fire {
-  color: var(--accent-color);
-}
-.products-section .tabs .tab-link {
-  border: 1px solid transparent; /* Viền trong suốt */
-  background-color: #f0f0f0;
-  font-weight: 500;
-  transition: all 0.3s ease-in-out;
-}
-
-/* Hiệu ứng khi di chuột vào nút (chưa được chọn) */
-.products-section .tabs .tab-link:not(.active):hover {
-  transform: scale(1.05); /* Phóng to nhẹ */
-  background-color: #e5e5e5;
-}
-
-/* Nút đang được chọn (active) */
-.products-section .tabs .tab-link.active {
-  /* Nền Gradient theo màu thương hiệu */
-  background: linear-gradient(45deg, var(--accent-color), #ff8c00);
-  color: var(--secondary-color);
-  font-weight: 700;
-  box-shadow: 0 6px 20px rgba(255, 69, 0, 0.3); /* Bóng đổ màu cam mờ */
-  transform: scale(1.05); /* Phóng to nhẹ */
-}
-.product-image {
-  background: #ffffff; /* Đảm bảo nền luôn trắng sạch */
-  padding: 20px; /* Tạo khoảng đệm 20px xung quanh ảnh */
-}
-
-/* Thẻ img bên trong */
-.product-image img {
-  width: 100%;
-  height: 100%; /* Cần thêm height 100% để hoạt động tốt với padding */
-  aspect-ratio: 1 / 1;
-  /* Đây là thay đổi quan trọng nhất */
-  object-fit: contain; /* Co dãn ảnh để nằm trọn vẹn bên trong khung */
 }
