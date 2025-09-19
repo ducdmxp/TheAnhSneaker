@@ -295,8 +295,9 @@ section {
 
 .product-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 30px;
+
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 20px; /* Giảm khoảng cách một chút */
 }
 .product-card {
   border: 1px solid var(--border-color);
@@ -317,8 +318,7 @@ section {
 }
 .product-image {
   position: relative;
-  background: #ffffff;
-  padding: 20px;
+  width: 100%;
 }
 .product-image img {
   width: 100%;
@@ -389,7 +389,7 @@ section {
 }
 .buy-button {
   display: block;
-  background: var(--primary-color);
+  background: #28a745;
   color: var(--secondary-color);
   padding: 12px;
   border-radius: 8px;
