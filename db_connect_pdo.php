@@ -2,8 +2,8 @@
 // Thông tin kết nối CSDL
 $host = 'localhost';
 $dbname = 'theanhgi_data'; // Thay bằng tên database của bạn
-$user = 'root';          // Thay bằng username database của bạn
-$pass = '';              // Thay bằng mật khẩu database của bạn
+$user = 'theanhgi_admin';          // Thay bằng username database của bạn
+$pass = 'theanhadmin@123';              // Thay bằng mật khẩu database của bạn
 $charset = 'utf8mb4';
 
 // Cấu hình DSN (Data Source Name)
