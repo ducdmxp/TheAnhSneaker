@@ -6,6 +6,8 @@ AddDefaultCharset UTF-8
 
 <IfModule mod_rewrite.c>
   RewriteEngine On
+  # Thư mục gốc của website trên tên miền. Nếu đặt web trong thư mục con (vd: /shop/) thì sửa thành /shop/
+  RewriteBase /
 
   # --- (Tuỳ chọn) Bắt buộc HTTPS: bỏ dấu # khi website đã có chứng chỉ SSL ---
   # RewriteCond %{HTTPS} off
@@ -25,17 +27,34 @@ AddDefaultCharset UTF-8
 </IfModule>
 
 # Chặn truy cập file nhạy cảm (file nén chứa mã nguồn + mật khẩu DB, file cấu hình)
-<FilesMatch "\.(zip|rar|7z|sql|bak|env|log|ini)$|^(db_connect_pdo|config|config\.example)\.php$">
+<FilesMatch "\.(zip|rar|7z|sql|bak|env|log|ini|md|json|lock|dist)$|^(db_connect_pdo|config|config\.example)\.php$">
   Require all denied
 </FilesMatch>
 
-# Trang quản trị và API không được lập chỉ mục
+# Ẩn hoàn toàn (trả 404) thư mục/file bắt đầu bằng dấu chấm: .git, .claude, .htaccess, .user.ini...
+# (trừ .well-known dùng để cấp chứng chỉ SSL) và các thư mục nội bộ không phục vụ ra web.
+RedirectMatch 404 "(^|/)\.(?!well-known(/|$))"
+RedirectMatch 404 "(^|/)(database|includes)(/|$)"
+
+# Header bảo mật
 <IfModule mod_headers.c>
-  <If "%{REQUEST_URI} =~ m#/(admin|api)/#">
+  # Trang quản trị không được lập chỉ mục
+  <If "%{REQUEST_URI} =~ m#/admin/#">
     Header set X-Robots-Tag "noindex, nofollow"
   </If>
   Header always set X-Content-Type-Options "nosniff"
   Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  # Không cho website khác nhúng trang vào iframe (chống clickjacking)
+  Header always set X-Frame-Options "SAMEORIGIN"
+  # CSP mức an toàn: không chặn script quảng cáo/Google Maps, chỉ khóa nhúng iframe, <base>, plugin và nơi gửi form
+  Header always set Content-Security-Policy "frame-ancestors 'self'; base-uri 'self'; object-src 'none'; form-action 'self'"
+  # Tắt quyền trình duyệt website không dùng tới
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+  # Chỉ gửi HSTS khi truy cập qua HTTPS (bắt buộc HTTPS trong 1 năm)
+  Header always set Strict-Transport-Security "max-age=31536000" "expr=%{HTTPS} == 'on'"
+  # Ẩn phiên bản PHP
+  Header always unset X-Powered-By
+  Header unset X-Powered-By
 </IfModule>
 
 # Nén Gzip

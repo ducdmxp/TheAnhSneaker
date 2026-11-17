@@ -17,7 +17,7 @@ try {
     header('Location: setup.php');
     exit;
 }
-header('X-Frame-Options: DENY');
+header('X-Frame-Options: SAMEORIGIN');
 $errors = [
     '1' => 'Tên đăng nhập hoặc mật khẩu không đúng!',
     'locked' => 'Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.',

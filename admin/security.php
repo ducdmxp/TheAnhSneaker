@@ -53,7 +53,7 @@ function require_login(): void
     }
     // Trang quản trị không được cache và không được nhúng iframe
     header('Cache-Control: no-store');
-    header('X-Frame-Options: DENY');
+    header('X-Frame-Options: SAMEORIGIN');
 }
 
 // ---------------- CSRF ----------------

@@ -7,7 +7,7 @@
 require_once __DIR__ . '/security.php';
 require_once __DIR__ . '/simple_page.php';
 admin_session_start();
-header('X-Frame-Options: DENY');
+header('X-Frame-Options: SAMEORIGIN');
 header('Cache-Control: no-store');
 
 $error = '';

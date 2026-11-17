@@ -309,7 +309,10 @@ $total_sold = $total_sold_query->fetchColumn() ?: 0;
             <button class="menu-toggle" id="menu-toggle"><i class="fas fa-bars"></i></button>
             <div class="user-info">
                 <span>Chào, <strong><?php echo htmlspecialchars($_SESSION['username']); ?></strong>!</span>
-                <a href="logout.php" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</a>
+                <form action="logout.php" method="post" style="display:inline;margin:0">
+                    <?= csrf_field() ?>
+                    <button type="submit" class="btn-logout" style="border:0;font:inherit;cursor:pointer"><i class="fas fa-sign-out-alt"></i> Đăng Xuất</button>
+                </form>
             </div>
         </header>
 

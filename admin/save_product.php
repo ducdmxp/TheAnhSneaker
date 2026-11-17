@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/security.php';
+require_once __DIR__ . '/image_upload.php';
 require_login();
 require_post_with_csrf();
 require_once __DIR__ . '/../db_connect_pdo.php';
@@ -54,7 +55,8 @@ if ($upload && $upload['error'] !== UPLOAD_ERR_NO_FILE) {
     if (!$info || !isset($extByType[$info[2]])) fail('Chỉ cho phép ảnh JPG, PNG, GIF hoặc WEBP.');
 
     $fileName = uniqid('product_', true) . '.' . $extByType[$info[2]];
-    if (!move_uploaded_file($upload['tmp_name'], __DIR__ . '/../uploads/' . $fileName)) fail('Không thể lưu file ảnh.');
+    // Lưu ảnh đã xoay đúng chiều và xóa sạch EXIF (vị trí GPS, tên máy...).
+    if (!store_clean_image($upload['tmp_name'], $info[2], __DIR__ . '/../uploads/' . $fileName)) fail('Không thể lưu file ảnh.');
     $imageUrl = 'uploads/' . $fileName;
     $newImageFile = $imageUrl;
 }
