@@ -1,10 +1,7 @@
 <?php
 // Bắt đầu session và kiểm tra đăng nhập
-session_start();
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header('Location: login.php');
-    exit;
-}
+require_once __DIR__ . '/security.php';
+require_login();
 
 require_once '../db_connect_pdo.php';
 
@@ -21,10 +18,14 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
     $id = $_GET['id'];
     $stmt = $pdo->prepare("SELECT * FROM products WHERE id = :id");
     $stmt->execute([':id' => $id]);
-    $product = $stmt->fetch();
-    
-    if ($product) {
+    $found = $stmt->fetch();
+
+    if ($found) {
+        $product = $found;
         $pageTitle = 'Chỉnh Sửa Sản Phẩm';
+    } else {
+        header('Location: index.php');
+        exit;
     }
 }
 ?>
@@ -324,6 +325,7 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
             </div>
             
             <form action="<?= $form_action ?>" method="post" enctype="multipart/form-data">
+                <?= csrf_field() ?>
                 <input type="hidden" name="id" value="<?= htmlspecialchars($product['id']) ?>">
                 
                 <div class="form-grid">
@@ -344,18 +346,17 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
 
                     <div class="form-group">
                         <label for="price_new">Giá mới (VND)</label>
-                        <input type="number" id="price_new" name="price_new" value="<?= htmlspecialchars($product['price_new']) ?>" required>
+                        <input type="number" id="price_new" name="price_new" min="0" step="1000" value="<?= htmlspecialchars($product['price_new']) ?>" required>
                     </div>
 
                     <div class="form-group">
                         <label for="price_old">Giá cũ (VND)</label>
-                        <input type="number" id="price_old" name="price_old" value="<?= htmlspecialchars($product['price_old']) ?>">
+                        <input type="number" id="price_old" name="price_old" min="0" step="1000" value="<?= htmlspecialchars($product['price_old']) ?>">
                     </div>
                     
                     <div class="form-group full-width">
                         <label for="product_image">Ảnh sản phẩm</label>
-                        <input type="file" id="product_image" name="product_image" accept="image/png, image/jpeg, image/gif">
-                        <input type="hidden" name="current_image" value="<?= htmlspecialchars($product['image_url']) ?>">
+                        <input type="file" id="product_image" name="product_image" accept="image/png, image/jpeg, image/gif, image/webp"<?= empty($product['id']) ? ' required' : '' ?>>
                         
                         <?php if (!empty($product['image_url'])): ?>
                             <div class="current-image">
@@ -367,12 +368,12 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
 
                     <div class="form-group">
                         <label for="sold_count">Số lượng đã bán</label>
-                        <input type="number" id="sold_count" name="sold_count" value="<?= htmlspecialchars($product['sold_count']) ?>">
+                        <input type="number" id="sold_count" name="sold_count" min="0" value="<?= htmlspecialchars($product['sold_count']) ?>">
                     </div>
                     
                     <div class="form-group">
                         <label for="tag">Tag (ví dụ: Hot, New)</label>
-                        <input type="text" id="tag" name="tag" value="<?= htmlspecialchars($product['tag']) ?>">
+                        <input type="text" id="tag" name="tag" maxlength="50" value="<?= htmlspecialchars($product['tag']) ?>">
                     </div>
 
                     <div class="form-actions">

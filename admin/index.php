@@ -1,10 +1,7 @@
 <?php
 // Bắt đầu session và kiểm tra đăng nhập
-session_start();
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header('Location: login.php');
-    exit;
-}
+require_once __DIR__ . '/security.php';
+require_login();
 
 // Kết nối CSDL bằng PDO
 require_once '../db_connect_pdo.php';
@@ -245,6 +242,20 @@ $total_sold = $total_sold_query->fetchColumn() ?: 0;
         .action-links a:hover { opacity: 0.85; }
         .edit-link { background-color: var(--warning-color); color: #fff; }
         .delete-link { background-color: var(--danger-color); }
+        .inline-form { display: inline; margin: 0; }
+        .action-links button.delete-link {
+            padding: 6px 10px;
+            border: 0;
+            border-radius: 5px;
+            font: inherit;
+            font-size: 14px;
+            color: #fff;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .action-links button.delete-link:hover { opacity: 0.85; }
 
         img.product-thumb {
             width: 50px;
@@ -347,14 +358,18 @@ $total_sold = $total_sold_query->fetchColumn() ?: 0;
                         <?php if (!empty($products)): ?>
                             <?php foreach ($products as $product): ?>
                             <tr>
-                                <td><strong><?= $product['id'] ?></strong></td>
+                                <td><strong><?= (int) $product['id'] ?></strong></td>
                                 <td><img src="../<?= htmlspecialchars($product['image_url']) ?>" alt="<?= htmlspecialchars($product['name']) ?>" class="product-thumb"></td>
                                 <td><?= htmlspecialchars($product['name']) ?></td>
                                 <td><strong><?= number_format($product['price_new']) ?> VND</strong></td>
                                 <td><?= htmlspecialchars($product['category']) ?></td>
                                 <td class="action-links">
-                                    <a href="edit_product.php?id=<?= $product['id'] ?>" class="edit-link"><i class="fas fa-pencil-alt"></i> Sửa</a>
-                                    <a href="delete_product.php?id=<?= $product['id'] ?>" class="delete-link" onclick="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')"><i class="fas fa-trash-alt"></i> Xóa</a>
+                                    <a href="edit_product.php?id=<?= (int) $product['id'] ?>" class="edit-link"><i class="fas fa-pencil-alt"></i> Sửa</a>
+                                    <form action="delete_product.php" method="post" class="inline-form" onsubmit="return confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="id" value="<?= (int) $product['id'] ?>">
+                                        <button type="submit" class="delete-link"><i class="fas fa-trash-alt"></i> Xóa</button>
+                                    </form>
                                 </td>
                             </tr>
                             <?php endforeach; ?>

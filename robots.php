@@ -7,7 +7,6 @@ $base = parse_url(site_base_url(), PHP_URL_PATH) ?: '/';
 User-agent: *
 Allow: /
 Disallow: <?= $base ?>admin/
-Disallow: <?= $base ?>api/
 Disallow: <?= $base ?>includes/
 
 Sitemap: <?= site_url('sitemap.xml') ?>

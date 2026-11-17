@@ -1,9 +1,17 @@
 <?php
-session_start();
-if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
+require_once __DIR__ . '/security.php';
+admin_session_start();
+if (is_logged_in()) {
     header('Location: index.php');
     exit;
 }
+header('X-Frame-Options: DENY');
+$errors = [
+    '1' => 'Tên đăng nhập hoặc mật khẩu không đúng!',
+    'locked' => 'Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.',
+    'server' => 'Không kết nối được máy chủ, vui lòng thử lại sau.',
+];
+$error = $errors[$_GET['error'] ?? ''] ?? '';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -186,12 +194,11 @@ if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
             <div class="form-container">
                 <h1>Đăng Nhập</h1>
                 <p class="subtitle">Vui lòng nhập thông tin của bạn.</p>
-                <?php
-                if (isset($_GET['error'])) {
-                    echo '<div class="error">Tên đăng nhập hoặc mật khẩu không đúng!</div>';
-                }
-                ?>
+                <?php if ($error): ?>
+                    <div class="error"><?= htmlspecialchars($error) ?></div>
+                <?php endif; ?>
                 <form action="auth_pdo.php" method="post">
+                    <?= csrf_field() ?>
                     <div class="form-group">
                         <label for="username">Tên đăng nhập</label>
                         <input type="text" id="username" name="username" required autocomplete="username">

@@ -1,85 +1,94 @@
 <?php
-session_start();
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header('Location: login.php');
-    exit;
+require_once __DIR__ . '/security.php';
+require_login();
+require_post_with_csrf();
+require_once __DIR__ . '/../db_connect_pdo.php';
+
+function fail(string $message): void
+{
+    http_response_code(400);
+    exit('Lỗi: ' . htmlspecialchars($message) . ' <a href="javascript:history.back()">Quay lại</a>');
 }
 
-// Đảm bảo sử dụng file kết nối PDO, file này sẽ tạo ra biến $pdo
-require_once '../db_connect_pdo.php';
+$allowedCategories = ['nike', 'adidas', 'new-balance', 'other'];
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    // Lấy dữ liệu từ form
-    $id = $_POST['id'];
-    $name = $_POST['name'];
-    $category = $_POST['category'];
-    $price_new = $_POST['price_new'];
-    $price_old = !empty($_POST['price_old']) ? $_POST['price_old'] : NULL;
-    $sold_count = !empty($_POST['sold_count']) ? $_POST['sold_count'] : 0;
-    $tag = $_POST['tag'];
-    
-    // SỬA LỖI 1: Lấy đúng tên ô input ẩn 'current_image' thay vì 'image_url'
-    $image_url = $_POST['current_image']; // Mặc định lấy ảnh cũ
+// ---------- Kiểm tra dữ liệu ----------
+$id = filter_var($_POST['id'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: null;
+$name = trim((string) ($_POST['name'] ?? ''));
+$category = (string) ($_POST['category'] ?? '');
+$priceNew = filter_var($_POST['price_new'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+$priceOldRaw = trim((string) ($_POST['price_old'] ?? ''));
+$priceOld = $priceOldRaw === '' ? null : filter_var($priceOldRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+$soldRaw = trim((string) ($_POST['sold_count'] ?? ''));
+$soldCount = $soldRaw === '' ? 0 : filter_var($soldRaw, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+$tag = trim((string) ($_POST['tag'] ?? ''));
 
-    // === PHẦN XỬ LÝ UPLOAD ẢNH ===
-    // Kiểm tra xem có file nào được tải lên không và không có lỗi
-    if (isset($_FILES['product_image']) && $_FILES['product_image']['error'] === UPLOAD_ERR_OK) {
-        $file = $_FILES['product_image'];
-        $upload_dir = '../uploads/';
-        
-        $file_extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-        $new_file_name = uniqid('product_', true) . '.' . $file_extension;
-        $target_file = $upload_dir . $new_file_name;
+if ($name === '' || mb_strlen($name) > 255) fail('Tên sản phẩm không được để trống và tối đa 255 ký tự.');
+if (!in_array($category, $allowedCategories, true)) fail('Danh mục không hợp lệ.');
+if ($priceNew === false) fail('Giá mới phải là số nguyên không âm.');
+if ($priceOld === false) fail('Giá cũ phải là số nguyên không âm.');
+if ($soldCount === false) fail('Số lượng đã bán phải là số nguyên không âm.');
+if (mb_strlen($tag) > 50) fail('Tag tối đa 50 ký tự.');
 
-        $allowed_types = ['jpg', 'jpeg', 'png', 'gif'];
-        if (in_array($file_extension, $allowed_types)) {
-            if (move_uploaded_file($file['tmp_name'], $target_file)) {
-                $image_url = 'uploads/' . $new_file_name;
-
-                if (!empty($_POST['current_image'])) {
-                    $old_image_path = '../' . $_POST['current_image'];
-                    if (file_exists($old_image_path)) {
-                        unlink($old_image_path);
-                    }
-                }
-            } else {
-                die("Lỗi: Không thể upload file.");
-            }
-        } else {
-            die("Lỗi: Chỉ cho phép upload file ảnh (JPG, JPEG, PNG, GIF).");
-        }
-    }
-
-    // === PHẦN LƯU VÀO DATABASE ===
-    // SỬA LỖI 2: Sử dụng biến kết nối $pdo thay vì $conn
-    if (empty($id)) {
-        // Thêm mới sản phẩm
-        $sql = "INSERT INTO products (name, category, price_new, price_old, image_url, sold_count, tag) VALUES (:name, :category, :price_new, :price_old, :image_url, :sold_count, :tag)";
-        $stmt = $pdo->prepare($sql);
-    } else {
-        // Cập nhật sản phẩm
-        $sql = "UPDATE products SET name=:name, category=:category, price_new=:price_new, price_old=:price_old, image_url=:image_url, sold_count=:sold_count, tag=:tag WHERE id=:id";
-        $stmt = $pdo->prepare($sql);
-    }
-
-    // Bind các tham số
-    $stmt->bindParam(':name', $name);
-    $stmt->bindParam(':category', $category);
-    $stmt->bindParam(':price_new', $price_new);
-    $stmt->bindParam(':price_old', $price_old);
-    $stmt->bindParam(':image_url', $image_url);
-    $stmt->bindParam(':sold_count', $sold_count);
-    $stmt->bindParam(':tag', $tag);
-    if (!empty($id)) {
-        $stmt->bindParam(':id', $id);
-    }
-    
-    // Thực thi và chuyển hướng
-    if ($stmt->execute()) {
-        header("Location: index.php");
-        exit();
-    } else {
-        echo "Lỗi khi lưu sản phẩm.";
-    }
+// Ảnh hiện tại luôn lấy từ database, KHÔNG tin dữ liệu gửi lên từ form.
+$oldImage = '';
+if ($id) {
+    $stmt = $pdo->prepare('SELECT image_url FROM products WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $row = $stmt->fetch();
+    if (!$row) fail('Không tìm thấy sản phẩm.');
+    $oldImage = (string) $row['image_url'];
 }
-?>
+$imageUrl = $oldImage;
+$newImageFile = null;
+
+// ---------- Upload ảnh ----------
+$upload = $_FILES['product_image'] ?? null;
+if ($upload && $upload['error'] !== UPLOAD_ERR_NO_FILE) {
+    if ($upload['error'] !== UPLOAD_ERR_OK) fail('Upload ảnh thất bại (mã lỗi ' . (int) $upload['error'] . ').');
+    if ($upload['size'] > 10 * 1024 * 1024) fail('Ảnh tối đa 10MB.');
+
+    // Kiểm tra nội dung thật sự là ảnh; đuôi file lấy theo loại ảnh, không theo tên file gửi lên.
+    $info = @getimagesize($upload['tmp_name']);
+    $extByType = [IMAGETYPE_JPEG => 'jpg', IMAGETYPE_PNG => 'png', IMAGETYPE_GIF => 'gif', IMAGETYPE_WEBP => 'webp'];
+    if (!$info || !isset($extByType[$info[2]])) fail('Chỉ cho phép ảnh JPG, PNG, GIF hoặc WEBP.');
+
+    $fileName = uniqid('product_', true) . '.' . $extByType[$info[2]];
+    if (!move_uploaded_file($upload['tmp_name'], __DIR__ . '/../uploads/' . $fileName)) fail('Không thể lưu file ảnh.');
+    $imageUrl = 'uploads/' . $fileName;
+    $newImageFile = $imageUrl;
+}
+
+if (!$id && $imageUrl === '') fail('Vui lòng chọn ảnh cho sản phẩm mới.');
+
+// ---------- Lưu database ----------
+$params = [
+    ':name' => $name,
+    ':category' => $category,
+    ':price_new' => $priceNew,
+    ':price_old' => $priceOld,
+    ':image_url' => $imageUrl,
+    ':sold_count' => $soldCount,
+    ':tag' => $tag,
+];
+try {
+    if ($id) {
+        $params[':id'] = $id;
+        $sql = 'UPDATE products SET name=:name, category=:category, price_new=:price_new, price_old=:price_old, image_url=:image_url, sold_count=:sold_count, tag=:tag WHERE id=:id';
+    } else {
+        $sql = 'INSERT INTO products (name, category, price_new, price_old, image_url, sold_count, tag) VALUES (:name, :category, :price_new, :price_old, :image_url, :sold_count, :tag)';
+    }
+    $pdo->prepare($sql)->execute($params);
+} catch (PDOException $e) {
+    error_log('[admin/save_product] ' . $e->getMessage());
+    if ($newImageFile) delete_product_image($newImageFile);
+    fail('Không lưu được sản phẩm, vui lòng thử lại.');
+}
+
+// Chỉ xóa ảnh cũ sau khi đã lưu thành công ảnh mới.
+if ($newImageFile && $oldImage !== '' && $oldImage !== $newImageFile) {
+    delete_product_image($oldImage);
+}
+
+header('Location: index.php');
+exit;

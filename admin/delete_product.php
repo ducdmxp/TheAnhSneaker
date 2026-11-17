@@ -1,49 +1,31 @@
 <?php
-// Bắt đầu session và kiểm tra đăng nhập
-session_start();
-if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    header('Location: login.php');
-    exit;
+require_once __DIR__ . '/security.php';
+require_login();
+require_post_with_csrf();
+require_once __DIR__ . '/../db_connect_pdo.php';
+
+$id = filter_var($_POST['id'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+if (!$id) {
+    http_response_code(400);
+    exit('Lỗi: ID sản phẩm không hợp lệ.');
 }
 
-// Kết nối CSDL bằng PDO
-require_once '../db_connect_pdo.php';
-
-// Kiểm tra xem ID sản phẩm có được gửi đến không
-if (isset($_GET['id']) && !empty($_GET['id'])) {
-    $id = $_GET['id'];
-
-    try {
-        // --- BƯỚC 1: Lấy đường dẫn ảnh trước khi xóa khỏi DB ---
-        $stmt_select = $pdo->prepare("SELECT image_url FROM products WHERE id = :id");
-        $stmt_select->execute([':id' => $id]);
-        $product = $stmt_select->fetch();
-
-        if ($product) {
-            $image_path = '../' . $product['image_url'];
-
-            // --- BƯỚC 2: Xóa file ảnh khỏi server ---
-            // Kiểm tra xem file có tồn tại không trước khi xóa
-            if (file_exists($image_path)) {
-                unlink($image_path); // Hàm xóa file
-            }
-
-            // --- BƯỚC 3: Xóa sản phẩm khỏi cơ sở dữ liệu ---
-            $stmt_delete = $pdo->prepare("DELETE FROM products WHERE id = :id");
-            $stmt_delete->execute([':id' => $id]);
-
-            // --- BƯỚC 4: Chuyển hướng về trang danh sách ---
-            header("Location: index.php");
-            exit();
-        } else {
-            die("Lỗi: Không tìm thấy sản phẩm để xóa.");
-        }
-
-    } catch (PDOException $e) {
-        die("Lỗi CSDL: " . $e->getMessage());
+try {
+    $stmt = $pdo->prepare('SELECT image_url FROM products WHERE id = :id');
+    $stmt->execute([':id' => $id]);
+    $product = $stmt->fetch();
+    if (!$product) {
+        http_response_code(404);
+        exit('Lỗi: Không tìm thấy sản phẩm để xóa.');
     }
-} else {
-    // Nếu không có ID, báo lỗi
-    die("Lỗi: Không có ID sản phẩm được cung cấp.");
+
+    $pdo->prepare('DELETE FROM products WHERE id = :id')->execute([':id' => $id]);
+    delete_product_image($product['image_url']);
+} catch (PDOException $e) {
+    error_log('[admin/delete_product] ' . $e->getMessage());
+    http_response_code(500);
+    exit('Lỗi: Không xóa được sản phẩm, vui lòng thử lại.');
 }
-?>
+
+header('Location: index.php');
+exit;
