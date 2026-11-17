@@ -2,11 +2,13 @@
 /**
  * Cấu hình & hàm tiện ích SEO dùng chung cho các trang public.
  *
- * Nếu biết chắc tên miền chính thức, hãy điền vào SITE_URL (không có "/" ở cuối),
- * ví dụ: 'https://theanhsneaker.vn'. Để trống thì hệ thống tự nhận diện theo request.
+ * Tên miền chính thức đặt ở 'site_url' trong config.php (không có "/" ở cuối),
+ * ví dụ: 'https://theanhsneaker.page.gd'. Để trống thì hệ thống tự nhận diện theo request.
  */
+require_once __DIR__ . '/config.php';
+
 if (!defined('SITE_URL')) {
-    define('SITE_URL', '');
+    define('SITE_URL', (string) config_value('site_url', ''));
 }
 
 const SITE_NAME   = 'TheAnhSneaker';
