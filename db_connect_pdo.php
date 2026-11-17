@@ -3,18 +3,7 @@
  * Kết nối CSDL. Thông tin đăng nhập đọc từ config.php (không nằm trong git).
  * Xem config.example.php để biết cách tạo config.php.
  */
-function app_config(): array
-{
-    static $config = null;
-    if ($config === null) {
-        $file = __DIR__ . '/config.php';
-        if (!is_file($file)) {
-            throw new RuntimeException('Chưa có config.php. Hãy copy config.example.php thành config.php và điền thông tin database.');
-        }
-        $config = require $file;
-    }
-    return $config;
-}
+require_once __DIR__ . '/includes/config.php';
 
 $config = app_config();
 $pdo = new PDO(

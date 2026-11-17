@@ -8,6 +8,7 @@ User-agent: *
 Allow: /
 Disallow: <?= $base ?>admin/
 Disallow: <?= $base ?>includes/
+Disallow: <?= $base ?>api/
 
 Sitemap: <?= site_url('sitemap.xml') ?>
 

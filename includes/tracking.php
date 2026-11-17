@@ -8,17 +8,49 @@
  * - Google Ads:     ID dạng "AW-XXXXXXXXX" + nhãn chuyển đổi (Conversion label) cho hành động
  *                   "Liên hệ" (bấm gọi / bấm Zalo).
  *
- * Sự kiện được gửi tự động khi khách bấm nút Zalo hoặc Gọi điện (xem script.js -> trackContact):
- *   Facebook: Contact | TikTok: Contact | GA4: generate_lead | Google Ads: conversion
+ * Sự kiện gửi tự động (xem script.js):
+ *   - Xem trang sản phẩm: Facebook ViewContent | TikTok ViewContent | GA4 view_item
+ *   - Bấm Zalo / Gọi:     Facebook Contact | TikTok Contact | GA4 generate_lead | Google Ads conversion
+ *
+ * Facebook Conversions API: điền 'fb_capi_token' trong config.php (bí mật, không để ở đây).
+ *
+ * Mã xác minh tên miền (để trống nếu chưa có):
+ * - FB_DOMAIN_VERIFICATION: Business Settings > Brand Safety > Domains > thêm tên miền > "Meta-tag",
+ *   copy phần content="..." (chỉ chuỗi mã, không copy cả thẻ).
+ * - GOOGLE_SITE_VERIFICATION: Google Search Console > thêm tài sản > "Thẻ HTML", copy phần content="...".
  */
-const FB_PIXEL_ID       = '1228037999368255';
-const TIKTOK_PIXEL_ID   = '';
-const GA4_ID            = '';
-const GADS_ID           = '';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/seo.php';
+
+const FB_PIXEL_ID        = '1228037999368255';
+const TIKTOK_PIXEL_ID    = '';
+const GA4_ID             = '';
+const GADS_ID            = '';
 const GADS_CONTACT_LABEL = '';
+const FB_DOMAIN_VERIFICATION   = '';
+const GOOGLE_SITE_VERIFICATION = '';
+
+/** Mã sự kiện PageView của lượt xem hiện tại (dùng chung cho Pixel và Conversions API). */
+function page_view_event_id(): string
+{
+    static $id = null;
+    return $id ??= bin2hex(random_bytes(12));
+}
+
+function capi_enabled(): bool
+{
+    return FB_PIXEL_ID !== '' && config_value('fb_capi_token') !== '';
+}
 
 function tracking_head(): void
 {
+    if (FB_DOMAIN_VERIFICATION !== '') { ?>
+    <meta name="facebook-domain-verification" content="<?= htmlspecialchars(FB_DOMAIN_VERIFICATION) ?>" />
+    <?php }
+    if (GOOGLE_SITE_VERIFICATION !== '') { ?>
+    <meta name="google-site-verification" content="<?= htmlspecialchars(GOOGLE_SITE_VERIFICATION) ?>" />
+    <?php }
+
     if (FB_PIXEL_ID !== '') { ?>
     <script>
       !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?
@@ -27,7 +59,7 @@ function tracking_head(): void
       t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
       document,'script','https://connect.facebook.net/en_US/fbevents.js');
       fbq('init', '<?= FB_PIXEL_ID ?>');
-      fbq('track', 'PageView');
+      fbq('track', 'PageView', {}, { eventID: '<?= page_view_event_id() ?>' });
     </script>
     <?php }
 
@@ -55,7 +87,12 @@ function tracking_head(): void
 
     $adsSendTo = (GADS_ID !== '' && GADS_CONTACT_LABEL !== '') ? GADS_ID . '/' . GADS_CONTACT_LABEL : '';
     ?>
-    <script>window.TAS_TRACKING = { adsSendTo: <?= json_encode($adsSendTo) ?> };</script>
+    <script>window.TAS_TRACKING = <?= json_encode([
+        'adsSendTo' => $adsSendTo,
+        'capi' => capi_enabled(),
+        'endpoint' => parse_url(site_base_url(), PHP_URL_PATH) . 'api/track.php',
+        'pageViewId' => capi_enabled() ? page_view_event_id() : '',
+    ], JSON_UNESCAPED_SLASHES) ?>;</script>
     <?php
 }
 

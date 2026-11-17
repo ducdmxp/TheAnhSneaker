@@ -12,4 +12,11 @@ return [
     'db_name' => 'ten_database',
     'db_user' => 'ten_user_database',
     'db_pass' => 'mat_khau_database',
+
+    // Facebook Conversions API (gửi sự kiện từ server, bù cho Pixel bị chặn trên iOS/trình duyệt).
+    // Lấy tại: Events Manager > chọn Pixel > Cài đặt > Conversions API > Tạo mã truy cập.
+    // Để trống = tắt.
+    'fb_capi_token' => '',
+    // Mã kiểm tra (tab "Kiểm tra sự kiện" trong Events Manager), chỉ điền khi đang test, xong thì xóa.
+    'fb_test_event_code' => '',
 ];

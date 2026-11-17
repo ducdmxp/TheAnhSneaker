@@ -51,6 +51,12 @@ function site_base_url(): string
     return $base = $scheme . '://' . $host . rtrim($path, '/') . '/';
 }
 
+/** Đường dẫn gốc của website trên tên miền, luôn kết thúc bằng "/" (vd: "/" hoặc "/shop/"). */
+function site_base_path(): string
+{
+    return parse_url(site_base_url(), PHP_URL_PATH) ?: '/';
+}
+
 /** Tạo URL tuyệt đối từ đường dẫn tương đối với thư mục gốc website. */
 function site_url(string $path = ''): string
 {
@@ -97,6 +103,10 @@ function seo_meta(array $opts): void
     <meta property="og:description" content="<?= e($description) ?>" />
     <meta property="og:url" content="<?= e($canonical) ?>" />
     <meta property="og:image" content="<?= e($image) ?>" />
+    <?php if (!empty($opts['image_width'])): ?>
+    <meta property="og:image:width" content="<?= (int) $opts['image_width'] ?>" />
+    <meta property="og:image:height" content="<?= (int) $opts['image_height'] ?>" />
+    <?php endif; ?>
     <meta property="og:image:alt" content="<?= e($title) ?>" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="<?= e($title) ?>" />

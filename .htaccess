@@ -22,12 +22,16 @@ AddDefaultCharset UTF-8
   RewriteRule ^robots\.txt$ robots.php [L]
   RewriteRule ^sitemap\.xml$ sitemap.php [L]
 
+  # Trang chi tiết sản phẩm: /san-pham/ten-san-pham-12/
+  RewriteRule ^san-pham/([a-z0-9-]+-[0-9]+)$ san-pham/$1/ [R=301,L]
+  RewriteRule ^san-pham/([a-z0-9-]+)-([0-9]+)/$ san-pham.php?slug=$1&id=$2 [L,QSA]
+
   # Chuyển hướng 301 URL cũ sang URL thân thiện (giữ thứ hạng/backlink cũ)
   RewriteRule ^(chinh-sach-van-chuyen|chinh-sach-doi-tra|chinh-sach-bao-hanh|huong-dan-chon-size)/\1\.php$ $1/ [R=301,L]
 </IfModule>
 
 # Chặn truy cập file nhạy cảm (file nén chứa mã nguồn + mật khẩu DB, file cấu hình)
-<FilesMatch "\.(zip|rar|7z|sql|bak|env|log|ini|md|json|lock|dist)$|^(db_connect_pdo|config|config\.example)\.php$">
+<FilesMatch "\.(zip|rar|7z|sql|bak|env|log|ini|md|json|lock|dist)$|^(db_connect_pdo|config|config\.example|router)\.php$">
   Require all denied
 </FilesMatch>
 
@@ -39,7 +43,7 @@ RedirectMatch 404 "(^|/)(database|includes)(/|$)"
 # Header bảo mật
 <IfModule mod_headers.c>
   # Trang quản trị không được lập chỉ mục
-  <If "%{REQUEST_URI} =~ m#/admin/#">
+  <If "%{REQUEST_URI} =~ m#/(admin|api)/#">
     Header set X-Robots-Tag "noindex, nofollow"
   </If>
   Header always set X-Content-Type-Options "nosniff"

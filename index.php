@@ -1,43 +1,26 @@
 <?php
-require_once __DIR__ . '/includes/seo.php';
-require_once __DIR__ . '/includes/icons.php';
-require_once __DIR__ . '/includes/image.php';
-require_once __DIR__ . '/includes/tracking.php';
+require_once __DIR__ . '/includes/layout.php';
 
 // Lấy sản phẩm để render sẵn HTML phía server (Google index được ngay, không phụ thuộc JavaScript).
 $products = [];
 try {
     require_once __DIR__ . '/db_connect_pdo.php';
-    $stmt = $pdo->query('SELECT id, name, category, price_new, price_old, image_url, sold_count, tag FROM products ORDER BY id DESC');
-    $products = $stmt->fetchAll();
+    $products = fetch_products($pdo);
 } catch (Throwable $ex) {
     error_log('[index] Không tải được sản phẩm: ' . $ex->getMessage());
 }
 
-$brandNames = ['nike' => 'Nike', 'adidas' => 'Adidas', 'new-balance' => 'New Balance'];
 $itemsPerLoad = 8;
 $year = date('Y');
-$zaloUrl = 'https://zalo.me/' . SITE_PHONE;
-$telUrl = 'tel:' . SITE_PHONE;
-
-function format_vnd($price): string
-{
-    return is_numeric($price) && $price > 0 ? number_format((float) $price, 0, ',', '.') . 'đ' : '';
-}
-
-function discount_percent(array $p): int
-{
-    $old = (float) ($p['price_old'] ?? 0);
-    $new = (float) ($p['price_new'] ?? 0);
-    return ($old > $new && $new > 0) ? (int) round(($old - $new) / $old * 100) : 0;
-}
+$zaloUrl = zalo_url();
+$telUrl = tel_url();
 
 $totalSold = array_sum(array_map(fn ($p) => (int) $p['sold_count'], $products));
 $featured = $products[0] ?? null;
 
 $pageTitle = "Giày Sneaker Nam Nữ Hot Trend {$year} Giá Rẻ Hà Nội | TheAnhSneaker";
-$pageDescription = "TheAnhSneaker chuyên giày sneaker nam nữ Nike, Adidas, New Balance hot trend {$year}, giá rẻ, full box, ship COD toàn quốc, kiểm tra hàng trước khi thanh toán, đổi size 7 ngày.";
-$ogImage = $featured['image_url'] ?? 'img/logo-512.png';
+$pageDescription = "Giày sneaker nam nữ hot trend {$year} giá tốt tại Hà Nội. Full box, ship COD toàn quốc, kiểm tra hàng trước khi trả tiền, đổi size 7 ngày.";
+$ogImage = $featured ? social_image($featured['image_url']) : 'img/logo-512.png';
 
 $faqs = [
     [
@@ -78,46 +61,10 @@ $testimonials = [
 ];
 
 // ---------- Dữ liệu cấu trúc (JSON-LD) ----------
+// Trang danh sách: ItemList chỉ trỏ tới URL từng trang sản phẩm (Product đầy đủ nằm ở trang chi tiết).
 $productItems = [];
 foreach ($products as $i => $p) {
-    $productItems[] = [
-        '@type' => 'ListItem',
-        'position' => $i + 1,
-        'item' => [
-            '@type' => 'Product',
-            'name' => $p['name'],
-            'image' => site_url($p['image_url']),
-            'sku' => 'TAS-' . $p['id'],
-            'brand' => ['@type' => 'Brand', 'name' => $brandNames[$p['category']] ?? SITE_NAME],
-            'offers' => [
-                '@type' => 'Offer',
-                'url' => site_url('#products'),
-                'priceCurrency' => 'VND',
-                'price' => (float) $p['price_new'],
-                'availability' => 'https://schema.org/InStock',
-                'itemCondition' => 'https://schema.org/NewCondition',
-                'seller' => ['@id' => site_url('#store')],
-                'shippingDetails' => [
-                    '@type' => 'OfferShippingDetails',
-                    'shippingRate' => ['@type' => 'MonetaryAmount', 'value' => 30000, 'currency' => 'VND'],
-                    'shippingDestination' => ['@type' => 'DefinedRegion', 'addressCountry' => 'VN'],
-                    'deliveryTime' => [
-                        '@type' => 'ShippingDeliveryTime',
-                        'handlingTime' => ['@type' => 'QuantitativeValue', 'minValue' => 0, 'maxValue' => 1, 'unitCode' => 'DAY'],
-                        'transitTime' => ['@type' => 'QuantitativeValue', 'minValue' => 1, 'maxValue' => 5, 'unitCode' => 'DAY'],
-                    ],
-                ],
-                'hasMerchantReturnPolicy' => [
-                    '@type' => 'MerchantReturnPolicy',
-                    'applicableCountry' => 'VN',
-                    'returnPolicyCategory' => 'https://schema.org/MerchantReturnFiniteReturnWindow',
-                    'merchantReturnDays' => 7,
-                    'returnMethod' => 'https://schema.org/ReturnByMail',
-                    'returnFees' => 'https://schema.org/ReturnShippingFees',
-                ],
-            ],
-        ],
-    ];
+    $productItems[] = ['@type' => 'ListItem', 'position' => $i + 1, 'url' => product_url($p), 'name' => $p['name']];
 }
 $graph = [
     store_schema(),
@@ -160,56 +107,18 @@ $heroImage = $featured ? optimized_image($featured['image_url'], 800) : 'img/log
         'description' => $pageDescription,
         'path' => '',
         'image' => $ogImage,
+        'image_width' => $featured ? 1200 : null,
+        'image_height' => $featured ? 630 : null,
     ]); ?>
     <?= json_ld(['@context' => 'https://schema.org', '@graph' => $graph]) ?>
 
     <link rel="preload" as="image" href="<?= e($heroImage) ?>" fetchpriority="high" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="style.css?v=<?= filemtime(__DIR__ . '/style.css') ?>" />
-    <script src="script.js?v=<?= filemtime(__DIR__ . '/script.js') ?>" defer></script>
-    <?php tracking_head(); ?>
+    <?php site_assets(); ?>
   </head>
   <body>
-    <?php tracking_body(); ?>
-    <a class="skip-link" href="#products">Bỏ qua tới sản phẩm</a>
+    <?php site_header(); ?>
 
-    <div class="topbar">
-      <div class="container topbar-inner">
-        <span><?= icon('truck') ?> Freeship đơn từ 1.000.000đ</span>
-        <span class="topbar-hide-sm"><?= icon('wallet') ?> Ship COD toàn quốc</span>
-        <span class="topbar-hide-sm"><?= icon('eye') ?> Kiểm tra hàng trước khi thanh toán</span>
-      </div>
-    </div>
-
-    <header class="header">
-      <div class="container header-inner">
-        <a href="./" class="logo" aria-label="TheAnhSneaker - Trang chủ">TheAnh<span>Sneaker</span></a>
-
-        <nav class="main-nav" id="main-nav" aria-label="Điều hướng chính">
-          <ul>
-            <li><a href="#products">Sản phẩm</a></li>
-            <li><a href="#why">Cam kết</a></li>
-            <li><a href="#reviews">Đánh giá</a></li>
-            <li><a href="#faq">Hỏi đáp</a></li>
-            <li><a href="#contact">Liên hệ</a></li>
-          </ul>
-        </nav>
-
-        <a href="<?= $telUrl ?>" class="btn btn-dark btn-sm header-call" data-track="call">
-          <?= icon('phone') ?><span><?= SITE_PHONE_DISPLAY ?></span>
-        </a>
-        <button class="nav-toggle" aria-label="Mở menu" aria-controls="main-nav" aria-expanded="false">
-          <?= icon('menu', 'icon-open') ?><?= icon('close', 'icon-close') ?>
-        </button>
-      </div>
-    </header>
-
-    <main>
+    <main id="main">
       <!-- HERO -->
       <section class="hero">
         <div class="container hero-inner">
@@ -249,14 +158,14 @@ $heroImage = $featured ? optimized_image($featured['image_url'], 800) : 'img/log
               decoding="async"
             />
             <?php if ($featured): ?>
-            <div class="hero-card">
+            <a class="hero-card" href="<?= e(product_href($featured)) ?>">
               <span class="hero-card-label">Mẫu mới về</span>
               <strong><?= e($featured['name']) ?></strong>
               <span class="hero-card-price">
                 <?= format_vnd($featured['price_new']) ?>
                 <?php if (format_vnd($featured['price_old'])): ?><s><?= format_vnd($featured['price_old']) ?></s><?php endif; ?>
               </span>
-            </div>
+            </a>
             <?php endif; ?>
             <div class="hero-badge"><?= icon('shield') ?> Kiểm tra rồi mới trả tiền</div>
           </div>
@@ -306,49 +215,7 @@ $heroImage = $featured ? optimized_image($featured['image_url'], 800) : 'img/log
             <?php if (!$products): ?>
             <p class="product-empty">Hiện chưa có sản phẩm nào. Nhắn Zalo để shop gửi mẫu mới nhất nhé!</p>
             <?php endif; ?>
-            <?php foreach ($products as $i => $p):
-                $brand = $brandNames[$p['category']] ?? '';
-                $alt = trim('Giày ' . $p['name'] . ($brand && stripos($p['name'], $brand) === false ? ' ' . $brand : '') . ' - ' . SITE_NAME);
-                $discount = discount_percent($p);
-            ?>
-            <article class="product-card<?= $i < $itemsPerLoad ? ' show' : '' ?>" data-category="<?= e($p['category']) ?>">
-              <div class="product-media">
-                <img
-                  src="<?= e(optimized_image($p['image_url'], 600)) ?>"
-                  alt="<?= e($alt) ?>"
-                  width="600"
-                  height="600"
-                  loading="lazy"
-                  decoding="async"
-                />
-                <div class="product-badges">
-                  <?php if (!empty($p['tag'])): ?><span class="badge badge-hot"><?= e($p['tag']) ?></span><?php endif; ?>
-                  <?php if ($discount > 0): ?><span class="badge badge-sale">-<?= $discount ?>%</span><?php endif; ?>
-                </div>
-              </div>
-              <div class="product-body">
-                <span class="product-brand"><?= e($brand ?: 'Sneaker') ?></span>
-                <h3 class="product-name"><?= e($p['name']) ?></h3>
-                <?php if ((int) $p['sold_count'] > 0): ?>
-                <p class="product-sold"><?= icon('fire') ?> Đã bán <?= (int) $p['sold_count'] ?></p>
-                <?php endif; ?>
-                <div class="product-price">
-                  <strong><?= format_vnd($p['price_new']) ?: 'Liên hệ' ?></strong>
-                  <?php if (format_vnd($p['price_old'])): ?><s><?= format_vnd($p['price_old']) ?></s><?php endif; ?>
-                </div>
-                <a
-                  href="<?= $zaloUrl ?>"
-                  class="btn btn-primary btn-block"
-                  target="_blank"
-                  rel="nofollow noopener"
-                  data-track="zalo"
-                  data-product="<?= e($p['name']) ?>"
-                  data-product-id="TAS-<?= (int) $p['id'] ?>"
-                  data-price="<?= (float) $p['price_new'] ?>"
-                ><?= icon('chat') ?> Đặt qua Zalo</a>
-              </div>
-            </article>
-            <?php endforeach; ?>
+            <?php foreach ($products as $i => $p) { product_card($p, $i < $itemsPerLoad); } ?>
           </div>
 
           <div class="load-more-wrap">
@@ -515,54 +382,6 @@ $heroImage = $featured ? optimized_image($featured['image_url'], 800) : 'img/log
       </section>
     </main>
 
-    <footer class="footer">
-      <div class="container footer-grid">
-        <div class="footer-col footer-about">
-          <a href="./" class="logo logo-light">TheAnh<span>Sneaker</span></a>
-          <p>Shop giày sneaker nam nữ hot trend tại Hà Nội. Chất lượng tốt, giá hợp lý, ship COD toàn quốc và hỗ trợ đổi size tận tâm.</p>
-          <div class="social-icons">
-            <a href="https://www.facebook.com/inhtheanh.881012" aria-label="Facebook TheAnhSneaker" target="_blank" rel="noopener"><?= icon('facebook') ?></a>
-            <a href="https://www.tiktok.com/@tradebolive" aria-label="TikTok TheAnhSneaker" target="_blank" rel="noopener"><?= icon('tiktok') ?></a>
-            <a href="<?= $zaloUrl ?>" aria-label="Zalo TheAnhSneaker" target="_blank" rel="nofollow noopener" data-track="zalo"><?= icon('chat') ?></a>
-          </div>
-        </div>
-        <div class="footer-col">
-          <p class="footer-title">Chính sách</p>
-          <ul>
-            <li><a href="./chinh-sach-van-chuyen/">Chính sách vận chuyển</a></li>
-            <li><a href="./chinh-sach-doi-tra/">Chính sách đổi trả</a></li>
-            <li><a href="./chinh-sach-bao-hanh/">Chính sách bảo hành</a></li>
-            <li><a href="./huong-dan-chon-size/">Hướng dẫn chọn size</a></li>
-          </ul>
-        </div>
-        <div class="footer-col">
-          <p class="footer-title">Liên hệ</p>
-          <address>
-            <?= SITE_STREET ?>, <?= SITE_DISTRICT ?>, <?= SITE_CITY ?><br />
-            Hotline/Zalo: <a href="<?= $telUrl ?>" data-track="call"><?= SITE_PHONE_DISPLAY ?></a><br />
-            Mở cửa: 08:00 - 22:00 hằng ngày
-          </address>
-        </div>
-      </div>
-      <div class="container footer-bottom">
-        <p>© <?= $year ?> TheAnhSneaker. Bảo lưu mọi quyền.</p>
-        <a href="./admin/login.php" rel="nofollow">Quản trị</a>
-      </div>
-    </footer>
-
-    <!-- Nút liên hệ nổi (desktop) -->
-    <div class="float-contact">
-      <a href="<?= $zaloUrl ?>" class="float-btn float-zalo" target="_blank" rel="nofollow noopener" data-track="zalo" aria-label="Chat Zalo">Zalo</a>
-      <a href="<?= $telUrl ?>" class="float-btn float-call" data-track="call" aria-label="Gọi <?= SITE_PHONE_DISPLAY ?>"><?= icon('phone') ?></a>
-    </div>
-
-    <!-- Thanh liên hệ cố định (mobile) -->
-    <div class="mobile-cta">
-      <a href="<?= $telUrl ?>" class="mobile-cta-call" data-track="call"><?= icon('phone') ?> Gọi ngay</a>
-      <a href="<?= $zaloUrl ?>" class="mobile-cta-zalo" target="_blank" rel="nofollow noopener" data-track="zalo"><?= icon('chat') ?> Chat Zalo</a>
-    </div>
-
-    <button id="scrollToTopBtn" class="to-top" aria-label="Lên đầu trang" hidden><?= icon('arrow-up') ?></button>
-    <div class="toast" role="status" aria-live="polite"></div>
+    <?php site_footer(); ?>
   </body>
 </html>
