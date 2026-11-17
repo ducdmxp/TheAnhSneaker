@@ -1,4 +1,7 @@
-<?php require_once __DIR__ . '/../includes/seo.php'; ?>
+<?php
+require_once __DIR__ . '/../includes/seo.php';
+require_once __DIR__ . '/../includes/tracking.php';
+?>
 <!DOCTYPE html>
 <html lang="vi">
   <head>
@@ -165,8 +168,10 @@
         margin-bottom: 20px;
       }
     </style>
+    <?php tracking_head(); ?>
   </head>
   <body>
+    <?php tracking_body(); ?>
     <header class="policy-header">
       <div class="container">
         <a href="../" class="logo">TheAnhSneaker</a>
