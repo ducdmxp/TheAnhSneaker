@@ -25,7 +25,7 @@ AddDefaultCharset UTF-8
 </IfModule>
 
 # Chặn truy cập file nhạy cảm (file nén chứa mã nguồn + mật khẩu DB, file cấu hình)
-<FilesMatch "\.(zip|rar|7z|sql|bak|env|log|ini)$|^db_connect_pdo\.php$">
+<FilesMatch "\.(zip|rar|7z|sql|bak|env|log|ini)$|^(db_connect_pdo|config|config\.example)\.php$">
   Require all denied
 </FilesMatch>
 

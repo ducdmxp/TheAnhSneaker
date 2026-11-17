@@ -1,26 +1,29 @@
 <?php
-// Thông tin kết nối CSDL
-$host = 'localhost';
-$dbname = 'theanhgi_data'; // Thay bằng tên database của bạn
-$user = 'theanhgi_admin';          // Thay bằng username database của bạn
-$pass = 'theanhadmin@123';              // Thay bằng mật khẩu database của bạn
-$charset = 'utf8mb4';
-
-// Cấu hình DSN (Data Source Name)
-$dsn = "mysql:host=$host;dbname=$dbname;charset=$charset";
-
-// Cấu hình các tùy chọn cho PDO
-$options = [
-    PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION, // Báo lỗi khi có lỗi
-    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,       // Trả về dạng mảng kết hợp
-    PDO::ATTR_EMULATE_PREPARES   => false,
-];
-
-try {
-    // Tạo một đối tượng PDO mới
-    $pdo = new PDO($dsn, $user, $pass, $options);
-} catch (\PDOException $e) {
-    // Nếu kết nối thất bại, hiển thị lỗi và dừng chương trình
-    throw new \PDOException($e->getMessage(), (int)$e->getCode());
+/**
+ * Kết nối CSDL. Thông tin đăng nhập đọc từ config.php (không nằm trong git).
+ * Xem config.example.php để biết cách tạo config.php.
+ */
+function app_config(): array
+{
+    static $config = null;
+    if ($config === null) {
+        $file = __DIR__ . '/config.php';
+        if (!is_file($file)) {
+            throw new RuntimeException('Chưa có config.php. Hãy copy config.example.php thành config.php và điền thông tin database.');
+        }
+        $config = require $file;
+    }
+    return $config;
 }
-?>
+
+$config = app_config();
+$pdo = new PDO(
+    sprintf('mysql:host=%s;dbname=%s;charset=utf8mb4', $config['db_host'], $config['db_name']),
+    $config['db_user'],
+    $config['db_pass'],
+    [
+        PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+        PDO::ATTR_EMULATE_PREPARES   => false,
+    ]
+);

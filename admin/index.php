@@ -4,7 +4,7 @@ require_once __DIR__ . '/security.php';
 require_login();
 
 // Kết nối CSDL bằng PDO
-require_once '../db_connect_pdo.php';
+require_once __DIR__ . '/../db_connect_pdo.php';
 
 // Lấy danh sách sản phẩm
 $stmt = $pdo->query("SELECT * FROM products ORDER BY id DESC");
@@ -299,7 +299,7 @@ $total_sold = $total_sold_query->fetchColumn() ?: 0;
                 <li><a href="#" class="active"><i class="fas fa-box"></i> Quản lý sản phẩm</a></li>
                 <li><a href="#"><i class="fas fa-shopping-cart"></i> Quản lý đơn hàng</a></li>
                 <li><a href="#"><i class="fas fa-users"></i> Quản lý người dùng</a></li>
-                <li><a href="#"><i class="fas fa-cog"></i> Cài đặt</a></li>
+                <li><a href="change_password.php"><i class="fas fa-key"></i> Đổi mật khẩu</a></li>
             </ul>
         </nav>
     </aside>

@@ -5,6 +5,18 @@ if (is_logged_in()) {
     header('Location: index.php');
     exit;
 }
+// Website mới chưa có tài khoản admin nào -> chuyển sang trang cài đặt.
+try {
+    require_once __DIR__ . '/../db_connect_pdo.php';
+    $hasTable = (bool) $pdo->query("SHOW TABLES LIKE 'admins'")->fetchColumn();
+    if (!$hasTable || (int) $pdo->query('SELECT COUNT(*) FROM admins')->fetchColumn() === 0) {
+        header('Location: setup.php');
+        exit;
+    }
+} catch (Throwable $e) {
+    header('Location: setup.php');
+    exit;
+}
 header('X-Frame-Options: DENY');
 $errors = [
     '1' => 'Tên đăng nhập hoặc mật khẩu không đúng!',
