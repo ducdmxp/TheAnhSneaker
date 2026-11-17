@@ -1,10 +1,11 @@
 <?php
 // Bật hiển thị lỗi để dễ dàng chẩn đoán
-ini_set('display_errors', 1);
+ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 // Thiết lập header để trình duyệt hiểu đây là dữ liệu JSON
 header('Content-Type: application/json; charset=utf-8');
+header('X-Robots-Tag: noindex');
 
 /*
  * Đảm bảo đường dẫn này là chính xác.
@@ -25,6 +26,7 @@ try {
 } catch (PDOException $e) {
     // Nếu có lỗi, trả về một thông báo lỗi dạng JSON
     http_response_code(500); // Lỗi server
-    echo json_encode(['error' => 'Lỗi truy vấn cơ sở dữ liệu: ' . $e->getMessage()]);
+    error_log('[api] ' . $e->getMessage());
+    echo json_encode(['error' => 'Không thể tải dữ liệu sản phẩm.']);
 }
 ?>

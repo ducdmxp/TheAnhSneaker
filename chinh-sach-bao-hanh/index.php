@@ -1,14 +1,20 @@
+<?php require_once __DIR__ . '/../includes/seo.php'; ?>
 <!DOCTYPE html>
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Chính Sách Bảo Hành - TheAnhSneaker</title>
-    <link rel="icon" type="image/png" href="./img/favicon.png" />
-    <meta
-      name="description"
-      content="Tìm hiểu chi tiết về chính sách bảo hành sản phẩm tại TheAnhSneaker. Chúng tôi cam kết chất lượng và hỗ trợ khách hàng tận tâm."
-    />
+    <?php seo_meta([
+        'title' => 'Chính Sách Bảo Hành | TheAnhSneaker',
+        'description' => 'Tìm hiểu chi tiết về chính sách bảo hành sản phẩm tại TheAnhSneaker. Chúng tôi cam kết chất lượng và hỗ trợ khách hàng tận tâm.',
+        'path' => 'chinh-sach-bao-hanh/',
+        'type' => 'article',
+        'prefix' => '../',
+    ]); ?>
+    <?= json_ld(['@context' => 'https://schema.org', '@graph' => [
+        ['@type' => 'WebPage', 'name' => 'Chính Sách Bảo Hành', 'url' => site_url('chinh-sach-bao-hanh/'), 'inLanguage' => 'vi-VN', 'isPartOf' => ['@type' => 'WebSite', 'name' => SITE_NAME, 'url' => site_url()]],
+        breadcrumb_schema([['Chính sách bảo hành', 'chinh-sach-bao-hanh/']]),
+    ]]) ?>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -153,17 +159,23 @@
           font-size: 1.3rem;
         }
       }
+      .breadcrumb {
+        font-size: 0.9rem;
+        color: #888;
+        margin-bottom: 20px;
+      }
     </style>
   </head>
   <body>
     <header class="policy-header">
       <div class="container">
-        <a href="/" class="logo">TheAnhSneaker</a>
+        <a href="../" class="logo">TheAnhSneaker</a>
       </div>
     </header>
 
     <main>
       <div class="policy-container">
+        <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../">Trang chủ</a> &rsaquo; <span>Chính sách bảo hành</span></nav>
         <h1>Chính Sách Bảo Hành Sản Phẩm</h1>
         <p>
           Tại TheAnhSneaker, chúng tôi luôn đặt chất lượng sản phẩm và sự hài
@@ -261,13 +273,13 @@
         </ul>
 
         <div style="text-align: center">
-          <a href="/" class="back-to-home">Quay Lại Trang Chủ</a>
+          <a href="../" class="back-to-home">Quay Lại Trang Chủ</a>
         </div>
       </div>
     </main>
 
     <footer class="policy-footer">
-      <p>© 2025 Bản quyền thuộc về TheAnhSneaker.</p>
+      <p>© <?= date('Y') ?> Bản quyền thuộc về TheAnhSneaker.</p>
     </footer>
   </body>
 </html>

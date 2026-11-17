@@ -1,14 +1,20 @@
+<?php require_once __DIR__ . '/../includes/seo.php'; ?>
 <!DOCTYPE html>
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Hướng Dẫn Chọn Size Giày Chuẩn - TheAnhSneaker</title>
-    <link rel="icon" type="image/png" href="./img/favicon.png" />
-    <meta
-      name="description"
-      content="Hướng dẫn cách đo chân và chọn size giày sneaker Nike, Adidas, New Balance chuẩn nhất tại TheAnhSneaker để có đôi giày vừa vặn hoàn hảo."
-    />
+    <?php seo_meta([
+        'title' => 'Hướng Dẫn Chọn Size Giày Chuẩn | TheAnhSneaker',
+        'description' => 'Hướng dẫn cách đo chân và chọn size giày sneaker Nike, Adidas, New Balance chuẩn nhất tại TheAnhSneaker để có đôi giày vừa vặn hoàn hảo.',
+        'path' => 'huong-dan-chon-size/',
+        'type' => 'article',
+        'prefix' => '../',
+    ]); ?>
+    <?= json_ld(['@context' => 'https://schema.org', '@graph' => [
+        ['@type' => 'WebPage', 'name' => 'Hướng Dẫn Chọn Size Giày Chuẩn', 'url' => site_url('huong-dan-chon-size/'), 'inLanguage' => 'vi-VN', 'isPartOf' => ['@type' => 'WebSite', 'name' => SITE_NAME, 'url' => site_url()]],
+        breadcrumb_schema([['Hướng dẫn chọn size', 'huong-dan-chon-size/']]),
+    ]]) ?>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -191,17 +197,23 @@
           padding: 8px 5px;
         }
       }
+      .breadcrumb {
+        font-size: 0.9rem;
+        color: #888;
+        margin-bottom: 20px;
+      }
     </style>
   </head>
   <body>
     <header class="policy-header">
       <div class="container">
-        <a href="/" class="logo">TheAnhSneaker</a>
+        <a href="../" class="logo">TheAnhSneaker</a>
       </div>
     </header>
 
     <main>
       <div class="policy-container">
+        <nav class="breadcrumb" aria-label="Breadcrumb"><a href="../">Trang chủ</a> &rsaquo; <span>Hướng dẫn chọn size</span></nav>
         <h1>Hướng Dẫn Chọn Size Giày Chuẩn Xác</h1>
         <p>
           Chọn đúng size giày là bước quan trọng nhất để đảm bảo sự thoải mái
@@ -352,13 +364,13 @@
         </ul>
 
         <div style="text-align: center">
-          <a href="/" class="back-to-home">Quay Lại Trang Chủ</a>
+          <a href="../" class="back-to-home">Quay Lại Trang Chủ</a>
         </div>
       </div>
     </main>
 
     <footer class="policy-footer">
-      <p>© 2025 Bản quyền thuộc về TheAnhSneaker.</p>
+      <p>© <?= date('Y') ?> Bản quyền thuộc về TheAnhSneaker.</p>
     </footer>
   </body>
 </html>

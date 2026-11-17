@@ -60,201 +60,133 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   revealElements.forEach((elem) => observer.observe(elem));
 
-  // --- PRODUCT FILTERING & DYNAMIC LOADING LOGIC ---
-
-  // THAY ĐỔI QUAN TRỌNG 1: Trỏ đến file PHP API thay vì Google Sheets
+  // --- PRODUCT FILTERING & LOAD MORE ---
+  // Sản phẩm được PHP render sẵn trong HTML (tốt cho SEO). JS chỉ lọc / phân trang
+  // bằng cách bật tắt class "show". Nếu HTML chưa có sản phẩm (VD: lỗi DB lúc render)
+  // thì mới gọi API để tải bổ sung.
   const productApiUrl = "api/fetch_products.php";
-
   const productGrid = document.querySelector(".product-grid");
   const tabLinks = document.querySelectorAll(".tab-link");
   const loadMoreBtn = document.getElementById("load-more-btn");
+  const itemsPerLoad = Number(productGrid?.dataset.perLoad) || 8;
 
-  let allProducts = [];
   let currentFilter = "all";
-  let itemsShown = 0;
-  const itemsPerLoad = 8;
+  let visibleLimit = itemsPerLoad;
 
-  // THAY ĐỔI QUAN TRỌNG 2: Hàm fetchProducts được viết lại để xử lý JSON từ PHP
-  async function fetchProducts() {
-    if (!productGrid) return;
+  const escapeHTML = (value) =>
+    String(value ?? "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+    })[c]);
 
+  const formatPrice = (price) => {
+    if (!price || isNaN(price)) return "";
+    return new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" }).format(price);
+  };
+
+  function buildCard(product) {
+    const card = document.createElement("article");
+    card.className = "product-card";
+    card.dataset.category = product.category;
+    const soldCount = Number(product.sold_count) > 0
+      ? `<div class="product-sold-count"><i class="fa-solid fa-fire" aria-hidden="true"></i><span>Đã bán ${Number(product.sold_count)}</span></div>`
+      : "";
+    const oldPrice = formatPrice(product.price_old)
+      ? `<span class="old-price">${formatPrice(product.price_old)}</span>`
+      : "";
+    const tag = product.tag ? `<span class="product-tag">${escapeHTML(product.tag)}</span>` : "";
+    card.innerHTML = `
+      <div class="product-image">
+        <img src="${escapeHTML(product.image_url)}" alt="Giày ${escapeHTML(product.name)} - TheAnhSneaker" width="400" height="400" loading="lazy" decoding="async" />
+        ${tag}
+      </div>
+      <div class="product-info">
+        <h3>${escapeHTML(product.name)}</h3>
+        <div class="product-rating" aria-hidden="true">
+          <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-alt"></i>
+        </div>
+        ${soldCount}
+        <div class="product-price"><span class="new-price">${formatPrice(product.price_new)}</span>${oldPrice}</div>
+        <a href="https://zalo.me/0981936021" class="buy-button" target="_blank" rel="nofollow noopener">Mua Ngay Qua Zalo</a>
+      </div>`;
+    return card;
+  }
+
+  const getCards = () => Array.from(productGrid.querySelectorAll(".product-card"));
+
+  function setEmptyMessage(text) {
+    let msg = productGrid.querySelector(".product-empty");
+    if (!text) {
+      if (msg) msg.remove();
+      return;
+    }
+    if (!msg) {
+      msg = document.createElement("p");
+      msg.className = "product-empty";
+      msg.style.cssText = "text-align: center; width: 100%;";
+      productGrid.appendChild(msg);
+    }
+    msg.textContent = text;
+  }
+
+  function renderProducts() {
+    const cards = getCards();
+    const matched = cards.filter(
+      (card) => currentFilter === "all" || card.dataset.category === currentFilter
+    );
+    cards.forEach((card) => card.classList.remove("show"));
+    matched.slice(0, visibleLimit).forEach((card) => card.classList.add("show"));
+
+    if (cards.length === 0) {
+      setEmptyMessage("Hiện chưa có sản phẩm nào.");
+    } else if (matched.length === 0) {
+      setEmptyMessage("Không có sản phẩm nào trong danh mục này.");
+    } else {
+      setEmptyMessage("");
+    }
+    if (loadMoreBtn) {
+      loadMoreBtn.style.display = matched.length > visibleLimit ? "block" : "none";
+    }
+  }
+
+  async function fetchProductsFallback() {
     try {
       const response = await fetch(productApiUrl);
-      if (!response.ok) {
-        throw new Error("Lỗi mạng khi tải sản phẩm.");
+      if (!response.ok) throw new Error("Lỗi mạng khi tải sản phẩm.");
+      const products = await response.json();
+      if (Array.isArray(products)) {
+        products.forEach((product) => productGrid.appendChild(buildCard(product)));
       }
-
-      allProducts = await response.json(); // Dữ liệu trả về là JSON
-
-      if (allProducts.length === 0) {
-        productGrid.innerHTML =
-          '<p style="text-align: center; width: 100%;">Hiện chưa có sản phẩm nào.</p>';
-        if (loadMoreBtn) loadMoreBtn.style.display = "none";
-        return;
-      }
-
-      filterAndShowProducts();
+      renderProducts();
     } catch (error) {
       console.error("Lỗi khi tải sản phẩm:", error);
-      productGrid.innerHTML =
-        '<p style="text-align: center; width: 100%;">Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.</p>';
+      setEmptyMessage("Không thể tải danh sách sản phẩm. Vui lòng thử lại sau.");
     }
   }
 
-  // Hàm hiển thị sản phẩm (Không thay đổi nhiều, chỉ cần đảm bảo các tên thuộc tính khớp)
-  function displayProducts(productsToDisplay) {
-    productGrid.innerHTML = ""; // Xóa sản phẩm cũ
-    productsToDisplay.forEach((product) => {
-      const productCard = document.createElement("div");
-      productCard.className = "product-card show";
-      productCard.setAttribute("data-category", product.category);
-
-      const formatPrice = (price) => {
-        if (!price || isNaN(price)) return "";
-        return new Intl.NumberFormat("vi-VN", {
-          style: "currency",
-          currency: "VND",
-        }).format(price);
-      };
-
-      let soldCountHTML = "";
-      if (product.sold_count && Number(product.sold_count) > 0) {
-        soldCountHTML = `
-            <div class="product-sold-count">
-                <i class="fa-solid fa-fire"></i>
-                <span>Đã bán ${product.sold_count}</span>
-            </div>
-        `;
-      }
-
-      const oldPriceHTML = product.price_old
-        ? `<span class="old-price">${formatPrice(product.price_old)}</span>`
-        : "";
-      const tagHTML = product.tag
-        ? `<span class="product-tag">${product.tag}</span>`
-        : "";
-
-      productCard.innerHTML = `
-          <div class="product-image">
-              <img src="${product.image_url}" alt="${product.name}" />
-              ${tagHTML}
-          </div>
-          <div class="product-info">
-              <h3>${product.name}</h3>
-              <div class="product-rating">
-                  <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-alt"></i>
-              </div>
-              ${soldCountHTML}
-              <div class="product-price">
-                  <span class="new-price">${formatPrice(
-                    product.price_new
-                  )}</span>
-                  ${oldPriceHTML}
-              </div>
-              <a href="https://zalo.me/0981936021" class="buy-button">Mua Ngay Qua Zalo</a>
-          </div>
-      `;
-      productGrid.appendChild(productCard);
-    });
-  }
-
-  // Hàm lọc và reset hiển thị
-  function filterAndShowProducts() {
-    const filteredProducts = allProducts.filter(
-      (p) => currentFilter === "all" || p.category === currentFilter
-    );
-    itemsShown = itemsPerLoad;
-    const productsToDisplay = filteredProducts.slice(0, itemsShown);
-
-    if (productsToDisplay.length > 0) {
-      displayProducts(productsToDisplay);
-    } else {
-      productGrid.innerHTML = `<p style="text-align: center; width: 100%;">Không có sản phẩm nào trong danh mục này.</p>`;
-    }
-
-    updateLoadMoreButton(filteredProducts);
-  }
-
-  // Hàm tải thêm sản phẩm
-  function loadMoreProducts() {
-    const filteredProducts = allProducts.filter(
-      (p) => currentFilter === "all" || p.category === currentFilter
-    );
-    const currentlyShowing =
-      productGrid.querySelectorAll(".product-card").length;
-    const nextItemsToShow = filteredProducts.slice(
-      currentlyShowing,
-      currentlyShowing + itemsPerLoad
-    );
-
-    // Nối sản phẩm mới vào lưới, không vẽ lại từ đầu
-    nextItemsToShow.forEach((product) => {
-      // (Code tạo productCard giống hệt trong hàm displayProducts)
-      const productCard = document.createElement("div");
-      productCard.className = "product-card show";
-      productCard.setAttribute("data-category", product.category);
-      const formatPrice = (price) => {
-        if (!price || isNaN(price)) return "";
-        return new Intl.NumberFormat("vi-VN", {
-          style: "currency",
-          currency: "VND",
-        }).format(price);
-      };
-      let soldCountHTML =
-        product.sold_count && Number(product.sold_count) > 0
-          ? `<div class="product-sold-count"><i class="fa-solid fa-fire"></i><span>Đã bán ${product.sold_count}</span></div>`
-          : "";
-      const oldPriceHTML = product.price_old
-        ? `<span class="old-price">${formatPrice(product.price_old)}</span>`
-        : "";
-      const tagHTML = product.tag
-        ? `<span class="product-tag">${product.tag}</span>`
-        : "";
-      productCard.innerHTML = `<div class="product-image"><img src="${
-        product.image_url
-      }" alt="${
-        product.name
-      }" />${tagHTML}</div><div class="product-info"><h3>${
-        product.name
-      }</h3><div class="product-rating"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-alt"></i></div>${soldCountHTML}<div class="product-price"><span class="new-price">${formatPrice(
-        product.price_new
-      )}</span>${oldPriceHTML}</div><a href="https://zalo.me/0981936021" class="buy-button">Mua Ngay Qua Zalo</a></div>`;
-      productGrid.appendChild(productCard);
+  if (productGrid) {
+    tabLinks.forEach((tab) => {
+      tab.addEventListener("click", () => {
+        tabLinks.forEach((link) => link.classList.remove("active"));
+        tab.classList.add("active");
+        currentFilter = tab.getAttribute("data-filter");
+        visibleLimit = itemsPerLoad;
+        renderProducts();
+      });
     });
 
-    updateLoadMoreButton(filteredProducts);
-  }
-
-  // Hàm cập nhật nút "Xem thêm"
-  function updateLoadMoreButton(filteredProducts) {
-    const currentlyShowing =
-      productGrid.querySelectorAll(".product-card").length;
     if (loadMoreBtn) {
-      if (currentlyShowing >= filteredProducts.length) {
-        loadMoreBtn.style.display = "none";
-      } else {
-        loadMoreBtn.style.display = "block";
-      }
+      loadMoreBtn.addEventListener("click", () => {
+        visibleLimit += itemsPerLoad;
+        renderProducts();
+      });
+    }
+
+    if (getCards().length > 0) {
+      renderProducts();
+    } else {
+      fetchProductsFallback();
     }
   }
-
-  // Gắn sự kiện cho các tab filter
-  tabLinks.forEach((tab) => {
-    tab.addEventListener("click", () => {
-      tabLinks.forEach((link) => link.classList.remove("active"));
-      tab.classList.add("active");
-      currentFilter = tab.getAttribute("data-filter");
-      filterAndShowProducts();
-    });
-  });
-
-  // Gắn sự kiện cho nút "Xem thêm"
-  if (loadMoreBtn) {
-    loadMoreBtn.addEventListener("click", loadMoreProducts);
-  }
-
-  // Bắt đầu chạy
-  fetchProducts();
 
   // --- TESTIMONIALS SLIDER LOGIC --- (Giữ nguyên)
   const sliderContainer = document.querySelector(".testimonial-slider");
@@ -281,6 +213,7 @@ document.addEventListener("DOMContentLoaded", function () {
       for (let i = 0; i < slideCount; i++) {
         const dot = document.createElement("button");
         dot.classList.add("dot");
+        dot.setAttribute("aria-label", `Xem nhóm đánh giá ${i + 1}`);
         if (i === currentIndex) dot.classList.add("active");
         dotsNav.appendChild(dot);
         dot.addEventListener("click", () => {
