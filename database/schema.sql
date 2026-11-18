@@ -18,3 +18,12 @@ CREATE TABLE IF NOT EXISTS admins (
   password VARCHAR(255) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Ảnh phụ (bộ sưu tập) của sản phẩm. Ảnh chính vẫn nằm ở products.image_url.
+CREATE TABLE IF NOT EXISTS product_images (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  product_id INT NOT NULL,
+  image_url VARCHAR(255) NOT NULL,
+  sort_order INT NOT NULL DEFAULT 0,
+  KEY idx_product (product_id, sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -8,11 +8,13 @@ require_once __DIR__ . '/includes/layout.php';
 $id = filter_var($_GET['id'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
 $product = null;
 $related = [];
+$gallery = [];
 try {
     require_once __DIR__ . '/db_connect_pdo.php';
     if ($id) {
         $product = fetch_product($pdo, $id);
         if ($product) {
+            $gallery = fetch_product_images($pdo, (int) $product['id']);
             $related = fetch_related($pdo, $product, 4);
         }
     }
@@ -71,10 +73,21 @@ $mainImage = optimized_image($product['image_url'], 900);
 $shareImage = social_image($product['image_url']);
 $alt = 'Giày ' . $product['name'] . ' - ' . SITE_NAME;
 
+// Ảnh chính + ảnh phụ cho bộ sưu tập ảnh.
+$allImages = array_merge([$product['image_url']], array_column($gallery, 'image_url'));
+$slides = [];
+foreach ($allImages as $i => $url) {
+    $slides[] = [
+        'full' => $i === 0 ? $mainImage : optimized_image($url, 900),
+        'thumb' => optimized_image($url, 160),
+        'alt' => $alt . ($i > 0 ? ' - ảnh ' . ($i + 1) : ''),
+    ];
+}
+
 $schema = [
     '@context' => 'https://schema.org',
     '@graph' => [
-        product_schema($product, true),
+        product_schema($product, true, $allImages),
         breadcrumb_schema([['Sản phẩm', '#products'], [$product['name'], $canonicalPath]]),
     ],
 ];
@@ -127,19 +140,44 @@ $viewContent = [
         </nav>
 
         <article class="pdp">
-          <div class="pdp-media">
-            <img
-              src="<?= e($base . $mainImage) ?>"
-              alt="<?= e($alt) ?>"
-              width="900"
-              height="900"
-              fetchpriority="high"
-              decoding="async"
-            />
-            <span class="product-badges">
-              <?php if (!empty($product['tag'])): ?><span class="badge badge-hot"><?= e($product['tag']) ?></span><?php endif; ?>
-              <?php if ($discount > 0): ?><span class="badge badge-sale">-<?= $discount ?>%</span><?php endif; ?>
-            </span>
+          <div class="pdp-gallery" data-gallery>
+            <div class="pdp-media">
+              <img
+                src="<?= e($base . $mainImage) ?>"
+                alt="<?= e($alt) ?>"
+                width="900"
+                height="900"
+                fetchpriority="high"
+                decoding="async"
+                data-gallery-main
+              />
+              <span class="product-badges">
+                <?php if (!empty($product['tag'])): ?><span class="badge badge-hot"><?= e($product['tag']) ?></span><?php endif; ?>
+                <?php if ($discount > 0): ?><span class="badge badge-sale">-<?= $discount ?>%</span><?php endif; ?>
+              </span>
+              <?php if (count($slides) > 1): ?>
+              <button type="button" class="pdp-nav pdp-prev" data-gallery-prev aria-label="Ảnh trước">‹</button>
+              <button type="button" class="pdp-nav pdp-next" data-gallery-next aria-label="Ảnh tiếp theo">›</button>
+              <span class="pdp-counter" data-gallery-counter>1 / <?= count($slides) ?></span>
+              <?php endif; ?>
+            </div>
+            <?php if (count($slides) > 1): ?>
+            <div class="pdp-thumbs" role="list">
+              <?php foreach ($slides as $i => $sl): ?>
+              <button
+                type="button"
+                class="pdp-thumb<?= $i === 0 ? ' is-active' : '' ?>"
+                role="listitem"
+                data-full="<?= e($base . $sl['full']) ?>"
+                data-alt="<?= e($sl['alt']) ?>"
+                aria-label="Xem ảnh <?= $i + 1 ?>"
+                <?= $i === 0 ? 'aria-current="true"' : '' ?>
+              >
+                <img src="<?= e($base . $sl['thumb']) ?>" alt="" width="80" height="80" loading="lazy" decoding="async" />
+              </button>
+              <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
           </div>
 
           <div class="pdp-info">

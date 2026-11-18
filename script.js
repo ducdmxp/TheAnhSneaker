@@ -24,6 +24,49 @@ document.addEventListener("DOMContentLoaded", () => {
 
   toTopBtn?.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 
+  // ---------- Bộ sưu tập ảnh trang sản phẩm ----------
+  document.querySelectorAll("[data-gallery]").forEach((gallery) => {
+    const main = gallery.querySelector("[data-gallery-main]");
+    const thumbs = Array.from(gallery.querySelectorAll(".pdp-thumb"));
+    const counter = gallery.querySelector("[data-gallery-counter]");
+    if (!main || thumbs.length < 2) return;
+    let current = 0;
+
+    const show = (i) => {
+      current = (i + thumbs.length) % thumbs.length;
+      const t = thumbs[current];
+      main.src = t.dataset.full;
+      main.alt = t.dataset.alt;
+      thumbs.forEach((el, j) => {
+        el.classList.toggle("is-active", j === current);
+        if (j === current) el.setAttribute("aria-current", "true");
+        else el.removeAttribute("aria-current");
+      });
+      t.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+      if (counter) counter.textContent = `${current + 1} / ${thumbs.length}`;
+    };
+
+    thumbs.forEach((t, i) => t.addEventListener("click", () => show(i)));
+    gallery.querySelector("[data-gallery-prev]")?.addEventListener("click", () => show(current - 1));
+    gallery.querySelector("[data-gallery-next]")?.addEventListener("click", () => show(current + 1));
+
+    // Vuốt trái/phải trên điện thoại
+    let startX = null;
+    const media = main.parentElement;
+    media.addEventListener("touchstart", (e) => (startX = e.touches[0].clientX), { passive: true });
+    media.addEventListener("touchend", (e) => {
+      if (startX === null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 40) show(current + (dx < 0 ? 1 : -1));
+      startX = null;
+    });
+
+    // Tải trước ảnh lớn để chuyển ảnh không bị chờ
+    const preload = () => thumbs.forEach((t) => (new Image().src = t.dataset.full));
+    if ("requestIdleCallback" in window) requestIdleCallback(preload);
+    else setTimeout(preload, 1500);
+  });
+
   // ---------- Hiệu ứng xuất hiện khi cuộn ----------
   const revealEls = document.querySelectorAll(".reveal");
   if ("IntersectionObserver" in window) {

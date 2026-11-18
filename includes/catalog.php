@@ -78,6 +78,33 @@ function fetch_product(PDO $pdo, int $id): ?array
     return $stmt->fetch() ?: null;
 }
 
+/** Số ảnh phụ tối đa cho mỗi sản phẩm (không tính ảnh chính). */
+const PRODUCT_GALLERY_MAX = 12;
+
+/** Tạo bảng ảnh phụ nếu website được cài trước khi có tính năng nhiều ảnh. */
+function ensure_product_images_table(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS product_images (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        product_id INT NOT NULL,
+        image_url VARCHAR(255) NOT NULL,
+        sort_order INT NOT NULL DEFAULT 0,
+        KEY idx_product (product_id, sort_order)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+}
+
+/** Ảnh phụ của sản phẩm: [['id' => .., 'image_url' => ..], ...]. Trả về [] nếu chưa có bảng. */
+function fetch_product_images(PDO $pdo, int $productId): array
+{
+    try {
+        $stmt = $pdo->prepare('SELECT id, image_url FROM product_images WHERE product_id = :id ORDER BY sort_order, id');
+        $stmt->execute([':id' => $productId]);
+        return $stmt->fetchAll();
+    } catch (PDOException $e) {
+        return []; // bảng chưa được tạo (chưa lưu sản phẩm nào kể từ khi cập nhật)
+    }
+}
+
 /** Sản phẩm liên quan: ưu tiên cùng thương hiệu, đủ $limit thì dừng. */
 function fetch_related(PDO $pdo, array $product, int $limit = 4): array
 {
@@ -98,14 +125,15 @@ function product_description(array $p): string
 }
 
 /** Product + Offer schema cho một sản phẩm. */
-function product_schema(array $p, bool $full = true): array
+function product_schema(array $p, bool $full = true, array $images = []): array
 {
+    $images = $images ?: [$p['image_url']];
     $data = [
         '@type' => 'Product',
         '@id' => product_url($p) . '#product',
         'name' => $p['name'],
         'url' => product_url($p),
-        'image' => site_url($p['image_url']),
+        'image' => count($images) > 1 ? array_map('site_url', $images) : site_url($images[0]),
         'sku' => 'TAS-' . $p['id'],
         'brand' => ['@type' => 'Brand', 'name' => brand_name($p['category']) ?: SITE_NAME],
         'offers' => [

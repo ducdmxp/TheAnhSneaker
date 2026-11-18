@@ -26,13 +26,21 @@ foreach ($products as $p) {
 $pages = [
     ['path' => '', 'mtime' => $homeMtime, 'changefreq' => 'daily', 'priority' => '1.0', 'images' => []],
 ];
+$galleryByProduct = [];
+try {
+    foreach (isset($pdo) ? $pdo->query('SELECT product_id, image_url FROM product_images ORDER BY sort_order, id') : [] as $row) {
+        $galleryByProduct[(int) $row['product_id']][] = $row['image_url'];
+    }
+} catch (Throwable $e) {
+    // chưa có bảng ảnh phụ
+}
 foreach ($products as $p) {
     $pages[] = [
         'path' => product_path($p),
         'mtime' => max($mtimeOf('san-pham.php') ?? 0, $mtimeOf($p['image_url']) ?? 0) ?: null,
         'changefreq' => 'weekly',
         'priority' => '0.8',
-        'images' => $p['image_url'] ? [$p['image_url']] : [],
+        'images' => array_merge($p['image_url'] ? [$p['image_url']] : [], $galleryByProduct[(int) $p['id']] ?? []),
     ];
 }
 foreach (['huong-dan-chon-size' => '0.6', 'chinh-sach-van-chuyen' => '0.4', 'chinh-sach-doi-tra' => '0.4', 'chinh-sach-bao-hanh' => '0.4'] as $dir => $priority) {

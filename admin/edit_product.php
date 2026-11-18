@@ -4,6 +4,7 @@ require_once __DIR__ . '/security.php';
 require_login();
 
 require_once __DIR__ . '/../db_connect_pdo.php';
+require_once __DIR__ . '/../includes/catalog.php';
 
 // Khởi tạo biến
 $product = [
@@ -12,6 +13,7 @@ $product = [
 ];
 $pageTitle = 'Thêm Sản Phẩm Mới';
 $form_action = 'save_product.php';
+$gallery = [];
 
 // Lấy dữ liệu nếu là trang sửa
 if (isset($_GET['id']) && !empty($_GET['id'])) {
@@ -22,6 +24,7 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
 
     if ($found) {
         $product = $found;
+        $gallery = fetch_product_images($pdo, (int) $found['id']);
         $pageTitle = 'Chỉnh Sửa Sản Phẩm';
     } else {
         header('Location: index.php');
@@ -227,6 +230,33 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
             margin-top: 5px;
         }
         
+        .hint { display: block; margin-top: 6px; font-size: 13px; color: var(--text-light); }
+        .gallery-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+            gap: 12px;
+            margin-top: 12px;
+        }
+        .gallery-item {
+            position: relative;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #f8fafc;
+        }
+        .gallery-item img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; }
+        .gallery-item label {
+            display: flex; align-items: center; gap: 6px; margin: 0;
+            padding: 6px 8px; font-size: 13px; font-weight: 500; cursor: pointer;
+        }
+        .gallery-item.marked img { opacity: .35; }
+        .gallery-item.marked { border-color: var(--danger-color); }
+        .gallery-item .new-tag {
+            position: absolute; top: 6px; left: 6px; background: var(--success-color); color: #fff;
+            font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px;
+        }
+        .upload-warning { margin-top: 8px; font-size: 14px; color: var(--danger-color); }
+
         .form-actions {
             grid-column: 1 / -1; /* Nút bấm luôn chiếm full chiều rộng */
             margin-top: 20px;
@@ -358,15 +388,32 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
                     </div>
                     
                     <div class="form-group full-width">
-                        <label for="product_image">Ảnh sản phẩm</label>
-                        <input type="file" id="product_image" name="product_image" accept="image/png, image/jpeg, image/gif, image/webp"<?= empty($product['id']) ? ' required' : '' ?>>
-                        
+                        <label for="product_image">Ảnh chính</label>
+                        <input type="file" id="product_image" name="product_image" accept="image/png, image/jpeg, image/gif, image/webp">
+                        <small class="hint">Ảnh hiển thị ở danh sách sản phẩm. Để trống nếu không đổi<?= empty($product['id']) ? ' (sản phẩm mới không chọn thì ảnh phụ đầu tiên sẽ làm ảnh chính)' : '' ?>.</small>
+
                         <?php if (!empty($product['image_url'])): ?>
                             <div class="current-image">
                                 <span>Ảnh hiện tại:</span>
                                 <img src="../<?= htmlspecialchars($product['image_url']) ?>" alt="Ảnh sản phẩm">
                             </div>
                         <?php endif; ?>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="gallery_images">Ảnh phụ (chọn được nhiều ảnh cùng lúc)</label>
+                        <input type="file" id="gallery_images" name="gallery_images[]" multiple accept="image/png, image/jpeg, image/gif, image/webp">
+                        <small class="hint">Giữ Ctrl (hoặc Shift) để chọn nhiều ảnh. Tối đa <?= PRODUCT_GALLERY_MAX ?> ảnh phụ, mỗi ảnh tối đa 10MB.</small>
+                        <div class="upload-warning" id="upload-warning" hidden></div>
+
+                        <div class="gallery-grid" id="gallery-grid">
+                            <?php foreach ($gallery as $g): ?>
+                                <div class="gallery-item">
+                                    <img src="../<?= htmlspecialchars($g['image_url']) ?>" alt="Ảnh phụ">
+                                    <label><input type="checkbox" name="delete_gallery[]" value="<?= (int) $g['id'] ?>"> Xóa ảnh này</label>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -394,6 +441,71 @@ if (isset($_GET['id']) && !empty($_GET['id'])) {
 
         menuToggle.addEventListener('click', () => {
             body.classList.toggle('sidebar-open');
+        });
+
+        // Ảnh phụ: xem trước ảnh mới chọn, làm mờ ảnh đánh dấu xóa, cảnh báo vượt giới hạn.
+        const MAX_GALLERY = <?= PRODUCT_GALLERY_MAX ?>;
+        const HAS_MAIN = <?= empty($product['image_url']) ? 'false' : 'true' ?>;
+        const MAX_FILE = 10 * 1024 * 1024;
+        const MAX_TOTAL = 60 * 1024 * 1024;
+        const galleryInput = document.getElementById('gallery_images');
+        const mainInput = document.getElementById('product_image');
+        const grid = document.getElementById('gallery-grid');
+        const warning = document.getElementById('upload-warning');
+        const submitBtn = document.querySelector('.form-actions button[type="submit"]');
+
+        function validateUploads() {
+            const files = Array.from(galleryInput.files);
+            const kept = grid.querySelectorAll('input[name="delete_gallery[]"]:not(:checked)').length;
+            const all = files.concat(Array.from(mainInput.files));
+            // Chưa có ảnh chính: ảnh phụ đầu tiên sẽ thành ảnh chính, nên được thêm 1 ảnh.
+            const extra = (HAS_MAIN || mainInput.files.length) ? 0 : 1;
+            const problems = [];
+            if (kept + files.length > MAX_GALLERY + extra) {
+                problems.push('Tối đa ' + MAX_GALLERY + ' ảnh phụ (đang giữ ' + kept + ', chọn thêm ' + files.length + ').');
+            }
+            const big = all.filter(f => f.size > MAX_FILE).map(f => f.name);
+            if (big.length) problems.push('Ảnh vượt 10MB: ' + big.join(', ') + '.');
+            if (all.reduce((t, f) => t + f.size, 0) > MAX_TOTAL) problems.push('Tổng dung lượng vượt 60MB, hãy lưu bớt rồi thêm tiếp.');
+            warning.textContent = problems.join(' ');
+            warning.hidden = problems.length === 0;
+            submitBtn.disabled = problems.length > 0;
+            submitBtn.style.opacity = problems.length ? .5 : 1;
+        }
+
+        galleryInput.addEventListener('change', () => {
+            grid.querySelectorAll('.gallery-item.is-new').forEach(el => {
+                URL.revokeObjectURL(el.querySelector('img').src);
+                el.remove();
+            });
+            Array.from(galleryInput.files).forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'gallery-item is-new';
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.alt = file.name;
+                const tag = document.createElement('span');
+                tag.className = 'new-tag';
+                tag.textContent = 'Mới';
+                item.append(img, tag);
+                grid.append(item);
+            });
+            validateUploads();
+        });
+        mainInput.addEventListener('change', validateUploads);
+        grid.addEventListener('change', e => {
+            if (e.target.name === 'delete_gallery[]') {
+                e.target.closest('.gallery-item').classList.toggle('marked', e.target.checked);
+                validateUploads();
+            }
+        });
+
+        // Sản phẩm mới phải có ít nhất 1 ảnh (chính hoặc phụ).
+        document.querySelector('form[enctype]').addEventListener('submit', e => {
+            if (!HAS_MAIN && !mainInput.files.length && !galleryInput.files.length) {
+                e.preventDefault();
+                alert('Vui lòng chọn ít nhất 1 ảnh cho sản phẩm.');
+            }
         });
     </script>
 </body>
