@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../includes/seo.php';
 require_once __DIR__ . '/../includes/tracking.php';
+require_once __DIR__ . '/../includes/layout.php';
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -25,6 +26,7 @@ require_once __DIR__ . '/../includes/tracking.php';
       href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;700;900&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="../logo.css?v=<?= filemtime(__DIR__ . '/../logo.css') ?>" />
 
     <style>
       /* Biến màu và font chữ chung từ trang chủ */
@@ -69,21 +71,6 @@ require_once __DIR__ . '/../includes/tracking.php';
         padding: 15px 0;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         text-align: center;
-      }
-      .policy-header .logo {
-        font-size: 1.5rem;
-        font-weight: 900;
-        background: linear-gradient(
-          45deg,
-          var(--accent-color),
-          #ff8c00,
-          #ff4500
-        );
-        -webkit-background-clip: text;
-        background-clip: text;
-        color: transparent;
-        -webkit-text-fill-color: transparent;
-        display: inline-block;
       }
 
       /* Style cho nội dung chính sách */
@@ -174,7 +161,7 @@ require_once __DIR__ . '/../includes/tracking.php';
     <?php tracking_body(); ?>
     <header class="policy-header">
       <div class="container">
-        <a href="../" class="logo">TheAnhSneaker</a>
+        <?php site_logo(); ?>
       </div>
     </header>
 

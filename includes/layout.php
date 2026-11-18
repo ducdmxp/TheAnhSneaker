@@ -31,6 +31,7 @@ function site_assets(): void
       rel="stylesheet"
     />
     <link rel="stylesheet" href="<?= $base ?>style.css?v=<?= filemtime($root . '/style.css') ?>" />
+    <link rel="stylesheet" href="<?= $base ?>logo.css?v=<?= filemtime($root . '/logo.css') ?>" />
     <script src="<?= $base ?>script.js?v=<?= filemtime($root . '/script.js') ?>" defer></script>
     <?php tracking_head();
 }
@@ -52,7 +53,7 @@ function site_header(): void
 
     <header class="header">
       <div class="container header-inner">
-        <a href="<?= $base ?>" class="logo" aria-label="TheAnhSneaker - Trang chủ">TheAnh<span>Sneaker</span></a>
+        <?php site_logo(); ?>
 
         <nav class="main-nav" id="main-nav" aria-label="Điều hướng chính">
           <ul>
@@ -75,6 +76,27 @@ function site_header(): void
     <?php
 }
 
+/** Logo: biểu tượng giày + chữ TheAnh / SNEAKER. $light = bản chữ trắng cho nền tối. */
+function site_logo(bool $light = false): void
+{
+    ?>
+    <a href="<?= site_base_path() ?>" class="logo<?= $light ? ' logo-light' : '' ?>" aria-label="TheAnhSneaker - Trang chủ">
+      <span class="logo-mark" aria-hidden="true">
+        <svg viewBox="0 12 38 21" width="38" height="21" focusable="false">
+          <path fill="#fff" d="M6.5 25.6V18.4c0-1.7 1.3-2.9 3-2.9h1.4c1.1 0 2 .6 2.5 1.6l.8 1.6c.6 1.1 1.9 1.6 3.1 1.1l2.5-1.1 6.9 4c1.5.9 3.2 1.4 5 1.5 2 .1 3.6 1.4 3.6 3.4H6.5Z"/>
+          <rect x="5.5" y="27" width="29.5" height="3.6" rx="1.8" fill="#fff"/>
+          <path d="M18.6 21.4l1.6-.7M21.3 22.9l1.6-.8M24 24.4l1.6-.8" stroke="#ff5a0a" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M3.5 19.5h-1M4 22.5H1.5" stroke="#fff" stroke-width="1.4" stroke-linecap="round" opacity=".75"/>
+        </svg>
+      </span>
+      <span class="logo-text">
+        <span class="logo-name">TheAnh</span>
+        <span class="logo-tag">Sneaker</span>
+      </span>
+    </a>
+    <?php
+}
+
 function site_footer(): void
 {
     $base = site_base_path();
@@ -83,7 +105,7 @@ function site_footer(): void
     <footer class="footer">
       <div class="container footer-grid">
         <div class="footer-col footer-about">
-          <a href="<?= $base ?>" class="logo logo-light">TheAnh<span>Sneaker</span></a>
+          <?php site_logo(true); ?>
           <p>Shop giày sneaker nam nữ hot trend tại Hà Nội. Chất lượng tốt, giá hợp lý, ship COD toàn quốc và hỗ trợ đổi size tận tâm.</p>
           <div class="social-icons">
             <a href="https://www.facebook.com/inhtheanh.881012" aria-label="Facebook TheAnhSneaker" target="_blank" rel="noopener"><?= icon('facebook') ?></a>

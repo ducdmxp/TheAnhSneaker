@@ -1,0 +1,76 @@
+/* Logo TheAnhSneaker – dùng chung cho mọi trang (kể cả trang chính sách không tải style.css). */
+.logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  color: var(--ink, #0e0e10);
+  line-height: 1;
+}
+.logo-mark {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: linear-gradient(140deg, var(--accent-2, #ff8a00) 0%, var(--accent, #ff4d00) 70%);
+  box-shadow: 0 6px 16px rgba(255, 77, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  transition: transform 0.25s ease;
+}
+.logo-mark svg {
+  width: 31px;
+  height: auto;
+  transform: translateY(1px) rotate(-8deg);
+}
+.logo:hover .logo-mark {
+  transform: rotate(-6deg) scale(1.04);
+}
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.logo-name {
+  font-size: 1.32rem;
+  font-weight: 900;
+  letter-spacing: -0.035em;
+}
+.logo-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.42em;
+  text-transform: uppercase;
+  color: var(--accent, #ff4d00);
+  margin-right: -0.42em; /* bù khoảng cách chữ cuối để căn đều với chữ phía trên */
+}
+.logo-light {
+  color: #fff;
+}
+.logo-light .logo-mark {
+  box-shadow: 0 6px 18px rgba(255, 77, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+.logo-light .logo-tag {
+  color: var(--accent-2, #ff8a00);
+}
+
+@media (max-width: 600px) {
+  .logo {
+    gap: 8px;
+  }
+  .logo-mark {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+  .logo-mark svg {
+    width: 26px;
+  }
+  .logo-name {
+    font-size: 1.15rem;
+  }
+  .logo-tag {
+    font-size: 0.56rem;
+    letter-spacing: 0.38em;
+    margin-right: -0.38em;
+  }
+}

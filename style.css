@@ -240,21 +240,6 @@ address {
   align-items: center;
   gap: 24px;
 }
-.logo {
-  font-size: 1.45rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
-  color: var(--ink);
-}
-.logo span {
-  background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
-}
-.logo-light {
-  color: #fff;
-}
 .main-nav {
   margin-left: auto;
 }
@@ -1394,9 +1379,6 @@ address {
     width: 44px;
     height: 44px;
     padding: 0;
-  }
-  .logo {
-    font-size: 1.25rem;
   }
   .section {
     padding: 64px 0;
